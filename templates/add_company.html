@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% block title %}Add Company - Management{% endblock %}
+{% load static %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Add New Company</h3>
+          <div class="card-tools">
+            <a href="{% url 'companies' %}" class="btn btn-secondary btn-sm">
+              <i class="fas fa-arrow-left"></i> Back to Companies
+            </a>
+          </div>
+        </div>
+        <div class="card-body">
+          <!-- Messages -->
+          {% if messages %}
+          <div class="mb-4">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <form method="POST" id="companyForm" novalidate>
+            {% csrf_token %}
+            <div class="row">
+              <div class="col-md-6">
+                <!-- Company Name -->
+                <div class="form-group mb-3">
+                  <label for="name" class="form-label">Company Name *</label>
+                  <input type="text" class="form-control" id="name" name="name" required maxlength="255">
+                  <div class="invalid-feedback" id="nameError">
+                    Please enter a company name.
+                  </div>
+                </div>
+                
+                <!-- Email -->
+                <div class="form-group mb-3">
+                  <label for="email" class="form-label">Email Address *</label>
+                  <input type="email" class="form-control" id="email" name="email" required>
+                  <div class="invalid-feedback" id="emailError">
+                    Please enter a valid email address.
+                  </div>
+                </div>
+                
+                <!-- Phone -->
+                <div class="form-group mb-3">
+                  <label for="phone_no" class="form-label">Phone Number</label>
+                  <input type="tel" class="form-control" id="phone_no" name="phone_no" maxlength="20">
+                  <div class="invalid-feedback" id="phone_noError">
+                    Please enter a valid phone number.
+                  </div>
+                </div>
+                
+                <!-- Website -->
+                <div class="form-group mb-3">
+                  <label for="website" class="form-label">Website</label>
+                  <input type="url" class="form-control" id="website" name="website">
+                  <div class="invalid-feedback" id="websiteError">
+                    Please enter a valid website URL.
+                  </div>
+                </div>
+              </div>
+              
+              <div class="col-md-6">
+                <!-- Address -->
+                <div class="form-group mb-3">
+                  <label for="address" class="form-label">Address</label>
+                  <textarea class="form-control" id="address" name="address" rows="5" maxlength="1000"></textarea>
+                </div>
+              </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="row mt-4">
+              <div class="col-12">
+                <div class="d-flex justify-content-between">
+                  <a href="{% url 'companies' %}" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancel
+                  </a>
+                  <button type="submit" class="btn btn-success">
+                    <i class="fas fa-save"></i> Add Company
+                  </button>
+                </div>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+$(document).ready(function() {
+  // Real-time validation
+  function validateForm() {
+    let isValid = true;
+
+    // Name validation
+    const name = $('#name').val().trim();
+    if (!name) {
+      $('#name').addClass('is-invalid');
+      $('#nameError').text('Company name is required.');
+      isValid = false;
+    } else {
+      $('#name').removeClass('is-invalid');
+    }
+
+    // Email validation
+    const email = $('#email').val().trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) {
+      $('#email').addClass('is-invalid');
+      $('#emailError').text('Email address is required.');
+      isValid = false;
+    } else if (!emailRegex.test(email)) {
+      $('#email').addClass('is-invalid');
+      $('#emailError').text('Please enter a valid email address.');
+      isValid = false;
+    } else {
+      $('#email').removeClass('is-invalid');
+    }
+
+    // Phone validation
+    const phone = $('#phone_no').val().trim();
+    if (phone) {
+      const phoneDigits = phone.replace(/\D/g, '');
+      if (phoneDigits.length < 10) {
+        $('#phone_no').addClass('is-invalid');
+        $('#phone_noError').text('Please enter a valid phone number (at least 10 digits).');
+        isValid = false;
+      } else {
+        $('#phone_no').removeClass('is-invalid');
+      }
+    }
+
+    return isValid;
+  }
+
+  // Real-time validation on input
+  $('#name, #email, #phone_no, #website').on('input', function() {
+    validateForm();
+  });
+
+  // Form submission validation
+  $('#companyForm').on('submit', function(e) {
+    if (!validateForm()) {
+      e.preventDefault();
+      $('.is-invalid').first().focus();
+    }
+  });
+
+  // Auto-format website URL
+  $('#website').on('blur', function() {
+    let url = $(this).val().trim();
+    if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+      $(this).val('https://' + url);
+    }
+  });
+
+  // Format phone number
+  $('#phone_no').on('blur', function() {
+    let phone = $(this).val().trim();
+    if (phone) {
+      const cleaned = phone.replace(/\D/g, '');
+      $(this).val(cleaned);
+    }
+  });
+});
+</script>
+{% endblock %}

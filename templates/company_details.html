@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block title %}Company Details - {{ company_obj.name }}{% endblock %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row mt-4">
+    <div class="col-12">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Company Details</h2>
+        <div>
+          <a href="{% url 'companies' %}" class="btn btn-secondary">Back to Companies</a>
+          <a href="{% url 'edit_company' company_obj.md5_id %}" class="btn btn-primary">Edit Company</a>
+        </div>
+      </div>
+<!-- 
+      {% if messages %}
+      <div class="mb-4">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %} -->
+
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h5 class="card-title mb-0">Company Information</h5>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-6">
+              <table class="table table-borderless">
+                                                <!-- <tr>
+                                    <th width="30%">Database ID:</th>
+                                    <td>{{ user_obj.id }}</td>
+                                </tr> -->
+                <tr>
+                    <th>ID:</th>
+                    <td>{{ company_obj.md5_id }}</td>
+                </tr>
+                <tr>
+                  <th width="30%">Company Name:</th>
+                  <td>{{ company_obj.name }}</td>
+                </tr>
+                <tr>
+                  <th>Email:</th>
+                  <td>{{ company_obj.email }}</td>
+                </tr>
+                <tr>
+                  <th>Phone:</th>
+                  <td>{{ company_obj.phone_no}}</td>
+                </tr>
+                <tr>
+                  <th>Website:</th>
+                  <td>
+                    {% if company_obj.website %}
+                    <a href="{{ company_obj.website }}" target="_blank">{{ company_obj.website }}</a>
+                    {% else %}
+                    Not set
+                    {% endif %}
+                  </td>
+                </tr>
+            
+              </table>
+            </div>
+            <!-- <div class="col-md-6">
+              <table class="table table-borderless">
+                <tr>
+                  <th width="30%">Status:</th>
+                  <td>
+                    {% if company_obj.status == '1' %}
+                    <span class="badge bg-success">Active</span>
+                    {% elif company_obj.status == '2' %}
+                    <span class="badge bg-warning">Inactive</span>
+                    {% else %}
+                    <span class="badge bg-danger">Deleted</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                <tr>
+                  <th>Address:</th>
+                  <td>{{ company_obj.address|default:"Not set" }}</td>
+                </tr>
+                <tr>
+                  <th>City:</th>
+                  <td>{{ company_obj.city|default:"Not set" }}</td>
+                </tr>
+                <tr>
+                  <th>State:</th>
+                  <td>{{ company_obj.state|default:"Not set" }}</td>
+                </tr>
+                <tr>
+                  <th>Country:</th>
+                  <td>{{ company_obj.country }}</td>
+                </tr>
+              </table>
+            </div>
+          </div> -->
+
+
+
+          <!-- {% if company_obj.description %}
+          <div class="row mt-4">
+            <div class="col-12">
+              <h6>Description</h6>
+              <p>{{ company_obj.description }}</p>
+            </div>
+          </div>
+          {% endif %} -->
+        </div>
+      </div>
+
+      <div class="mt-4 text-center">
+        <a href="{% url 'edit_company' company_obj.md5_id %}" class="btn btn-warning">Edit Company</a>
+        {% if company_obj.status != '5' %}
+        <a href="{% url 'delete_company' company_obj.md5_id %}" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this company?')">Delete Company</a>
+        {% else %}
+        <button class="btn btn-secondary" disabled>Company Deleted</button>
+        {% endif %}
+        <a href="{% url 'companies' %}" class="btn btn-secondary">Back to List</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

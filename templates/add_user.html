@@ -1,0 +1,314 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Member - Group Management{% endblock %}
+{% block page_title %}Add New Member{% endblock %}
+{% block breadcrumb %}Add Member{% endblock %}
+{% load custom_filters %}  
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+
+                <a href="{% url 'users' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Members
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Display Messages -->
+    <!-- {% if messages %}
+    <div class="row">
+        <div class="col-12">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert">
+                    <span>&times;</span>
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %} -->
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Member Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="memberForm">
+                        {% csrf_token %}
+                        
+                        <!-- Hidden fields -->
+                        <!-- <input type="hidden" id="status" name="status" value="1"> -->
+                        
+                        <!-- Basic Information -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="full_name" class="form-label">Full Name *</label>
+                                    <input type="text" class="form-control" id="full_name" name="full_name" 
+                                           placeholder="Enter full name" required maxlength="255"
+                                           value="{{ request.POST.full_name|default:'' }}">
+                                    <div class="invalid-feedback">Please enter full name.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="phone_no" class="form-label">Phone Number *</label>
+                                    <input type="text" class="form-control" id="phone_no" name="phone_no" 
+                                           placeholder="+1234567890" required maxlength="20"
+                                           value="{{ request.POST.phone_no|default:'' }}">
+                                    <small class="form-text text-muted">Include country code (e.g., +1 for US)</small>
+                                    <div class="invalid-feedback">Please enter phone number.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="email" class="form-label">Email Address *</label>
+                                    <input type="email" class="form-control" id="email" name="email" 
+                                           placeholder="Enter email address" required
+                                           value="{{ request.POST.email|default:'' }}">
+                                    <div class="invalid-feedback">Please enter valid email address.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="username" class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="username" name="username" 
+                                           placeholder="Enter username (optional)"
+                                           value="{{ request.POST.username|default:'' }}">
+                                    <small class="form-text text-muted">Optional - if not provided, email will be used</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Password Field -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="password" class="form-label">Password *</label>
+                                    <input type="password" class="form-control" id="password" name="password" 
+                                           placeholder="Enter password" required minlength="6">
+                                    <div class="invalid-feedback">Password must be at least 6 characters long.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group mb-3">
+                                    <label for="confirm_password" class="form-label">Confirm Password *</label>
+                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" 
+                                           placeholder="Confirm password" required>
+                                    <div class="invalid-feedback">Passwords do not match.</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Role Selection -->
+                        <div class="form-group mb-4">
+                            <label for="role" class="form-label">Role *</label>
+                            <select class="form-control" id="role" name="role" required>
+                                <option value="">Select Role</option>
+                                <option value="2" {% if request.POST.role == '2' %}selected{% endif %}>User</option>
+                                <option value="1" {% if request.POST.role == '1' %}selected{% endif %}>Admin</option>
+                                <!-- <option value="0" {% if request.POST.role == '0' %}selected{% endif %}>Super Admin</option> -->
+                            </select>
+                            <div class="invalid-feedback">Please select a role.</div>
+                            <small class="form-text text-muted">
+                                <i class="fas fa-info-circle"></i> 
+                                <strong>User:</strong> Basic access | 
+                                <strong>Admin:</strong> Manage users & groups 
+                                <!-- <strong>Super Admin:</strong> Full system access -->
+                            </small>
+                        </div>
+
+                        <!-- Role Description Cards -->
+                        <div class="row mb-4">
+                            <div class="col-md-4">
+                                <div class="card role-card" data-role="2">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-user fa-2x text-info mb-2"></i>
+                                        <h6 class="card-title">User</h6>
+                                        <p class="card-text small text-muted">Basic member access</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card role-card" data-role="1">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-user-shield fa-2x text-warning mb-2"></i>
+                                        <h6 class="card-title">Admin</h6>
+                                        <p class="card-text small text-muted">Manage users & groups</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- <div class="col-md-4">
+                                <div class="card role-card" data-role="0">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-crown fa-2x text-danger mb-2"></i>
+                                        <h6 class="card-title">Super Admin</h6>
+                                        <p class="card-text small text-muted">Full system control</p>
+                                    </div>
+                                </div>
+                            </div> -->
+                        </div>
+
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save"></i> Add Member
+                            </button>
+                            <a href="{% url 'users' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+    .role-card {
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+    .role-card:hover {
+        border-color: #007bff;
+        transform: translateY(-2px);
+    }
+    .role-card.selected {
+        border-color: #007bff;
+        background-color: #f8f9fa;
+    }
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    .required::after {
+        content: " *";
+        color: #dc3545;
+    }
+</style>
+
+<script>
+    $(document).ready(function() {
+        // Role card selection
+        $('.role-card').click(function() {
+            const role = $(this).data('role');
+            $('#role').val(role);
+            
+            // Update card styles
+            $('.role-card').removeClass('selected');
+            $(this).addClass('selected');
+        });
+
+        // Sync dropdown with card selection
+        $('#role').change(function() {
+            const role = $(this).val();
+            $('.role-card').removeClass('selected');
+            $(`.role-card[data-role="${role}"]`).addClass('selected');
+        });
+
+        // Password confirmation validation
+        function validatePassword() {
+            const password = $('#password').val();
+            const confirmPassword = $('#confirm_password').val();
+            
+            if (password && confirmPassword && password !== confirmPassword) {
+                $('#confirm_password').addClass('is-invalid');
+                return false;
+            } else {
+                $('#confirm_password').removeClass('is-invalid');
+                return true;
+            }
+        }
+
+        $('#confirm_password').on('input', validatePassword);
+        $('#password').on('input', validatePassword);
+
+        // Email validation
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+
+        $('#email').on('blur', function() {
+            const email = $(this).val();
+            if (email && !validateEmail(email)) {
+                $(this).addClass('is-invalid');
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        });
+
+        // Phone validation
+        $('#phone_no').on('input', function() {
+            const phone = $(this).val();
+            if (phone && phone.length < 10) {
+                $(this).addClass('is-invalid');
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        });
+
+        // Form submission handling
+        $('#memberForm').on('submit', function(e) {
+            let isValid = true;
+
+            // Required field validation
+            const requiredFields = ['#full_name', '#phone_no', '#email', '#password', '#role'];
+            requiredFields.forEach(field => {
+                const value = $(field).val().trim();
+                if (!value) {
+                    $(field).addClass('is-invalid');
+                    isValid = false;
+                } else {
+                    $(field).removeClass('is-invalid');
+                }
+            });
+
+            // Password validation
+            if (!validatePassword()) {
+                isValid = false;
+            }
+
+            // Email validation
+            const email = $('#email').val().trim();
+            if (email && !validateEmail(email)) {
+                $('#email').addClass('is-invalid');
+                isValid = false;
+            }
+
+            if (!isValid) {
+                e.preventDefault();
+                // Scroll to first error
+                $('.is-invalid').first().focus();
+                return false;
+            }
+
+            // Disable submit button to prevent double submission
+            const submitBtn = $(this).find('button[type="submit"]');
+            submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Adding Member...');
+        });
+
+        // Auto-close alerts after 5 seconds
+        setTimeout(function() {
+            $('.alert').fadeOut(300);
+        }, 5000);
+
+        // Initialize selected role card if form was submitted with errors
+        const initialRole = $('#role').val();
+        if (initialRole) {
+            $(`.role-card[data-role="${initialRole}"]`).addClass('selected');
+        }
+    });
+</script>
+{% endblock %}
