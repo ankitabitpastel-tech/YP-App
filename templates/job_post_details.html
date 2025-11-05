@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}Job Post Details - Management{% endblock %}
+{% load static %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+      <h1 class="h3 mb-0">Job Post Details</h1>
+      <a href="{% url 'job_posts_list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to List
+      </a>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">{{ job_post.job_title }}</h3>
+          <span class="badge badge-{% if job_post.status == '1' %}success{% else %}secondary{% endif %} float-right">
+            {% if job_post.status == '1' %}Active{% else %}Inactive{% endif %}
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <h5>Basic Information</h5>
+              <table class="table table-bordered">
+                <tr>
+                  <th width="30%">Company:</th>
+                  <td><a href="{% url 'company_details' company_md5 %}">{{ job_post.company.name }}</a></td>
+                </tr>
+                <tr>
+                  <th>Location:</th>
+                  <td>{{ job_post.location|default:"Not specified" }}</td>
+                </tr>
+                <tr>
+                  <th>Employment Type:</th>
+                  <td>{{ job_post.get_employment_type_display }}</td>
+                </tr>
+                <tr>
+                  <th>Salary Range:</th>
+                  <td>{{ job_post.salary_range|default:"Not specified" }}</td>
+                </tr>
+                <tr>
+                  <th>Posted On:</th>
+                  <td>{{ job_post.created_at|date:"Y-m-d" }}</td>
+                </tr>
+                <tr>
+                  <th>Last Updated:</th>
+                  <td>{{ job_post.updated_at|date:"Y-m-d H:i" }}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-12">
+              <h5>Job Description</h5>
+              <div class="card">
+                <div class="card-body">
+                  {% if job_post.job_description %}
+                    {{ job_post.job_description|linebreaks }}
+                  {% else %}
+                    <p class="text-muted">No description provided.</p>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mt-4">
+            <div class="col-12">
+              <h5>Requirements</h5>
+              <div class="card">
+                <div class="card-body">
+                  {% if job_post.requirements %}
+                    {{ job_post.requirements|linebreaks }}
+                  {% else %}
+                    <p class="text-muted">No requirements specified.</p>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mt-4">
+            <div class="col-12">
+              <div class="btn-group">
+                <a href="{% url 'edit_job_post' job_post.md5_id %}" class="btn btn-primary">
+                  <i class="fas fa-edit"></i> Edit Job Post
+                </a>
+                <a href="{% url 'job_posts_list' %}" class="btn btn-secondary">Back to List</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

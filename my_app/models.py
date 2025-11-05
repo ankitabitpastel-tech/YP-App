@@ -85,6 +85,9 @@ class company(models.Model):
 
     class Meta:
         db_table = 'company'
+
+    def get_follower_count(self):
+        return self.followers.count()
     
     def clean(self):
 
@@ -129,8 +132,54 @@ class company_followers(models.Model):
         on_delete=models.CASCADE,
         related_name='following_companies'
     )
-    followed_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now_add=True)
 
+    status = models.CharField(
+        max_length=1,
+        choices=[('0', 'unfollwed'), ('1', 'following'), ('5', 'deleted')], 
+        default='1', null=False,
+        blank=False
+    ) 
     class Meta:
         db_table = 'company_followers'
         unique_together = ['company', 'user']
+
+    def __str__(self):
+        return f"{self.user.full_name} follows {self.company.name}"
+
+class job_posts(models.Model):
+    STATUS_CHOICES = [
+        ('1', 'Active'),
+        ('0', 'Inactive'),
+        ('5', 'Deleted'),
+    ]
+    
+    EMPLOYMENT_TYPE_CHOICES = [
+        ('full_time', 'Full Time'),
+        ('part_time', 'Part Time'),
+        ('contract', 'Contract'),
+        ('freelance', 'Freelance'),
+        ('internship', 'Internship'),
+    ]
+    company = models.ForeignKey(
+        'company',
+        on_delete=models.CASCADE,
+        related_name='job_posts'
+    )
+
+    job_title = models.CharField(max_length=255, blank=False, null=False)
+    job_description = models.TextField(blank=True, null=True)
+    requirements = models.TextField(blank=True, null=True)
+    location = models.CharField(max_length=255, blank=True, null=True)
+    salary_range = models.CharField(max_length=100, blank=True, null=True)
+    employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_TYPE_CHOICES, default='full_time', blank=False, null=False)
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default='1')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'job_posts'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.job_title} - {self.company.name}"

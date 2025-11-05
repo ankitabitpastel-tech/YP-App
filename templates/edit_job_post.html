@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+{% block title %}Edit Job Post - Management{% endblock %}
+{% load static %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+      <h1 class="h3 mb-0">Edit Job Post</h1>
+      <a href="{% url 'job_posts_list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to List
+      </a>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Edit Job Post: {{ job_post.job_title }}</h3>
+        </div>
+        <div class="card-body">
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          <form method="POST" id="jobPostForm">
+            {% csrf_token %}
+            
+            <div class="form-group">
+              <label for="company_id">Company *</label>
+              <select class="form-control" id="company_id" name="company_id" required>
+                <option value="">-- Select Company --</option>
+                {% for comp in companies %}
+                <option value="{{ comp.md5_id }}" {% if comp.id == job_post.company.id %}selected{% endif %}>
+                  {{ comp.name }} ({{ comp.email }})
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="job_title">Job Title *</label>
+              <input type="text" class="form-control" id="job_title" name="job_title" 
+                     value="{{ job_post.job_title }}" required maxlength="255">
+            </div>
+
+            <div class="form-group">
+              <label for="job_description">Job Description *</label>
+              <textarea class="form-control" id="job_description" name="job_description" 
+                        rows="5" required>{{ job_post.job_description }}</textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="requirements">Requirements</label>
+              <textarea class="form-control" id="requirements" name="requirements" 
+                        rows="4">{{ job_post.requirements|default:'' }}</textarea>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="location">Location</label>
+                  <input type="text" class="form-control" id="location" name="location" 
+                         value="{{ job_post.location|default:'' }}" maxlength="255">
+                </div>
+              </div>
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="salary_range">Salary Range</label>
+                  <input type="text" class="form-control" id="salary_range" name="salary_range" 
+                         value="{{ job_post.salary_range|default:'' }}" maxlength="100">
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <div class="form-group">
+                  <label for="employment_type">Employment Type</label>
+                  <select class="form-control" id="employment_type" name="employment_type">
+                    <option value="">-- Select Type --</option>
+                    {% for value, label in employment_types %}
+                    <option value="{{ value }}" {% if job_post.employment_type == value %}selected{% endif %}>
+                      {{ label }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+              <!-- <div class="col-md-6">
+                <div class="form-group">
+                  <label for="application_deadline">Application Deadline</label>
+                  <input type="date" class="form-control" id="application_deadline" name="application_deadline" 
+                         value="{{ job_post.application_deadline|date:'Y-m-d'|default:'' }}">
+                </div>
+              </div> -->
+            </div>
+<!-- 
+            <div class="form-group">
+              <label for="status">Status</label>
+              <select class="form-control" id="status" name="status">
+                <option value="1" {% if job_post.status == '1' %}selected{% endif %}>Active</option>
+                <option value="0" {% if job_post.status == '0' %}selected{% endif %}>Inactive</option>
+              </select>
+            </div> -->
+
+            <div class="form-group">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Update Job Post
+              </button>
+              <a href="{% url 'job_posts_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

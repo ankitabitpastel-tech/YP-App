@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% block title %}Add Company Follower - Management{% endblock %}
+{% load static %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+      <h1 class="h3 mb-0">Add Company Follower</h1>
+      <a href="{% url 'company_followers_list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to List
+      </a>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Add New Follower Relationship</h3>
+        </div>
+        <div class="card-body">
+          <!-- Display messages -->
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          <form method="POST" id="followerForm">
+            {% csrf_token %}
+            
+            <div class="form-group">
+              <label for="user_id">Select User *</label>
+              <select class="form-control" id="user_id" name="user_id" required onchange="loadCompanies()">
+                <option value="">-- Select User --</option>
+                {% for usr in users %}
+                <option value="{{ usr.md5_id }}">{{ usr.full_name }} ({{ usr.email }})</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="company_id">Select Company *</label>
+              <select class="form-control" id="company_id" name="company_id" required disabled>
+                <option value="">-- First select a user --</option>
+              </select>
+              <small class="form-text text-muted">Only companies that the user is not currently following are shown</small>
+            </div>
+
+            <div class="form-group">
+              <button type="submit" class="btn btn-primary" id="submitBtn" disabled>
+                <i class="fas fa-user-plus"></i> Add Follower
+              </button>
+              <a href="{% url 'company_followers_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function loadCompanies() {
+  const userId = $('#user_id').val();
+  const companySelect = $('#company_id');
+  const submitBtn = $('#submitBtn');
+  
+  if (!userId) {
+    companySelect.html('<option value="">-- First select a user --</option>');
+    companySelect.prop('disabled', true);
+    submitBtn.prop('disabled', true);
+    return;
+  }
+  
+  // Show loading state
+  companySelect.html('<option value="">Loading companies...</option>');
+  companySelect.prop('disabled', true);
+  submitBtn.prop('disabled', true);
+  
+  // Fetch companies via AJAX - FIXED URL
+  $.get(`/company_followers/get_companies/?user_id=${userId}`, function(data) {
+    console.log('Companies data:', data); // For debugging
+    
+    if (data.companies && data.companies.length > 0) {
+      let options = '<option value="">-- Select Company --</option>';
+      data.companies.forEach(function(company) {
+        options += `<option value="${company.id}">${company.name} (${company.email})</option>`;
+      });
+      companySelect.html(options);
+      companySelect.prop('disabled', false);
+      submitBtn.prop('disabled', false);
+    } else {
+      companySelect.html('<option value="">No companies available to follow</option>');
+      companySelect.prop('disabled', true);
+      submitBtn.prop('disabled', true);
+    }
+  }).fail(function(xhr, status, error) {
+    console.log('AJAX Error:', error);
+    companySelect.html('<option value="">Error loading companies</option>');
+    companySelect.prop('disabled', true);
+    submitBtn.prop('disabled', true);
+  });
+}
+
+// Initialize
+$(document).ready(function() {
+  // Initialize the form state
+  loadCompanies();
+});
+</script>
+{% endblock %}

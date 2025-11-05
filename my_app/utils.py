@@ -31,3 +31,24 @@ def get_company_by_encrypted_id(encrypted_id):
         if encrypt_id(company.id) == encrypted_id:
             return company
     return None
+
+
+def get_company_follower_by_encrypted_id(encrypted_id):
+    from .models import company_followers
+    all_followers = company_followers.objects.all()
+    for follower in all_followers:
+        if encrypt_id(follower.id) == encrypted_id:
+            return follower
+    return None
+
+def get_job_post_by_encrypted_id(encrypted_id):
+    from .models import job_posts
+    try:
+        all_job_posts = job_posts.objects.all()
+        for job_post in all_job_posts:
+            if encrypt_id(job_post.id) == encrypted_id:
+                return job_post
+        return None
+    except Exception as e:
+        print(f"Error in get_job_post_by_encrypted_id: {str(e)}")
+        return None
