@@ -1274,7 +1274,7 @@ def articles_data(request):
             else:
                 image_thumbnail = '<span class="text-muted">No Image</span>'
 
-        data.append({
+            data.append({
                 "title": article.title,
                 "company": f"<a href='/companies/details/{company_md5}/'>{article.company.name}</a>",
                 "category": category_badge,
