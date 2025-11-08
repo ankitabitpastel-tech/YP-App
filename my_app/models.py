@@ -5,6 +5,7 @@ from django.conf import settings
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractUser
+from django.utils import timezone
 
 
 class user(models.Model):
@@ -183,3 +184,95 @@ class job_posts(models.Model):
 
     def __str__(self):
         return f"{self.job_title} - {self.company.name}"
+    
+
+class job_applications(models.Model):
+    STATUS_CHOICES = [
+        ('0', 'Applied'),
+        ('1', 'Approved'),
+        ('2', 'Rejected'),
+        ('3', 'Withdrawn'),
+        ('5', 'Deleted'),
+
+    ]
+    def resume_upload_path(instance, filename):
+        ext = filename.split('.')[-1]
+        timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+        safe_name = instance.user.full_name.replace(' ', '_')
+        filename = f"{safe_name}_{timestamp}.{ext}"
+        return f"resumes/{filename}"
+
+
+    job = models.ForeignKey(
+        'job_posts',
+        on_delete=models.CASCADE,
+        )
+    user = models.ForeignKey(
+        'user',
+        on_delete=models.CASCADE
+    )
+    about = models.TextField(null=True, blank=True)
+    resume = models.FileField(upload_to=resume_upload_path, null=False, blank=False)
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default='0')
+    applied_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'job_applications'
+        unique_together = ['job', 'user']
+        ordering = ['-applied_at']
+
+    def __str__(self):
+        return f"{self.user.full_name}-{self.job.job_title}"
+
+class articles(models.Model):
+    STATUS_CHOICES = [
+        ('1', 'Active'),
+        ('0', 'Inactive'),
+        ('5', 'Deleted'),
+    ]
+    CATEGORY_CHOICES = [
+        ('about_us', 'About Us'),
+        ('announcement', 'Announcement'),
+        ('technology', 'Technology'),
+        ('current_affairs', 'Current Affairs'),
+        ('news', 'News'),
+        ('updates', 'Updates'),
+        ('events', 'Events'),
+        ('tips', 'Tips & Advice'),
+        ('other', 'Other')
+
+    ]
+    def article_image_upload_path(instance, filename):
+        ext = filename.split('.')[-1]
+        timestamp = timezone.now().strftime("%Y%m%d_%H%M%S")
+        safe_company_name = instance.company.name.replace(' ', '_')
+        safe_company_name = ''.join(c for c in safe_company_name if c.isalnum() or c in ('_', '-')).strip('_')
+        filename = f"{safe_company_name}_{timestamp}.{ext}"
+        return f"articles/{filename}"
+
+    company = models.ForeignKey(
+        'company',
+        on_delete=models.CASCADE,
+        related_name='articles'
+    )
+    status = models.CharField(max_length=1, choices=STATUS_CHOICES, default='1')
+    
+    title = models.CharField(max_length=255)
+    category = models.CharField(max_length=50, choices= CATEGORY_CHOICES)
+    content = models.TextField()
+    image = models.ImageField(upload_to=article_image_upload_path, null=True, blank=True)  
+    published_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'articles'
+        ordering = ['-published_at']
+
+    def __str__(self):
+        return self.title
+
+
+    
+
+    

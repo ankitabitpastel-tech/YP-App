@@ -33,6 +33,20 @@ urlpatterns = [
     path('job_posts/edit/<str:encrypted_id>/', views.edit_job_post, name='edit_job_post'),
     path('job_posts/delete/<str:encrypted_id>/', views.delete_job_post, name='delete_job_post'),
 
+    path('job-applications/', views.job_applications_list, name='job_applications_list'),
+    path('job-applications/data/', views.job_applications_data, name='job_applications_data'),
+    path('job-applications/add/', views.add_job_application, name='add_job_application'),
+    path('job-applications/get-users/', views.get_users_not_applied, name='get_users_not_applied'),
+    path('job_application/details/<str:encrypted_id>/', views.job_application_details, name='job_application_details'),
+    path('job_application/edit/<str:encrypted_id>/', views.edit_job_application, name='edit_job_application'),
+    path('job_application/delete/<str:encrypted_id>/', views.delete_job_application, name='delete_job_application'),
+
+    path('articles/', views.articles_list, name='articles_list'),
+    path('articles/data/', views.articles_data, name='articles_data'),
+    path('articles/add/', views.add_article, name='add_article'),
+    path('articles/edit/<str:encrypted_id>/', views.edit_article, name='edit_article'),
+    path('articles/delete/<str:encrypted_id>/', views.delete_article, name='delete_article'),
+    path('articles/details/<str:encrypted_id>/', views.article_details, name='article_details'),
 
 
 

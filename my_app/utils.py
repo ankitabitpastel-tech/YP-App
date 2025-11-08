@@ -52,3 +52,27 @@ def get_job_post_by_encrypted_id(encrypted_id):
     except Exception as e:
         print(f"Error in get_job_post_by_encrypted_id: {str(e)}")
         return None
+
+def get_job_application_by_encrypted_id(encrypted_id):
+    from .models import job_applications
+    try:
+        all_applications = job_applications.objects.all()
+        for application in all_applications:
+            if encrypt_id(application.id) == encrypted_id:
+                return application
+        return None
+    except Exception as e:
+        print(f"Error in get_job_application_by_encrypted_id: {str(e)}")
+        return None
+
+def get_article_by_encrypted_id(encrypted_id):
+    from .models import articles
+    try:
+        all_articles = articles.objects.all()
+        for article in all_articles:
+            if encrypt_id(article.id) == encrypted_id:
+                return article
+        return None
+    except Exception as e:
+        print(f"Error in get_article_by_encrypted_id: {str(e)}")
+        return None

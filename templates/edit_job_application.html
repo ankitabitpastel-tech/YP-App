@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+{% block title %}Edit Job Application - Management{% endblock %}
+{% load static %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+      <h1 class="h3 mb-0">Edit Job Application</h1>
+      <a href="{% url 'job_applications_list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to List
+      </a>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Edit Application: {{ application.user.full_name }} - {{ application.job.job_title }}</h3>
+        </div>
+        <div class="card-body">
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          <form method="POST" id="editApplicationForm" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- Display current info (readonly) -->
+            <div class="form-group">
+              <label>Applicant</label>
+              <input type="text" class="form-control" value="{{ application.user.full_name }} ({{ application.user.email }})" readonly>
+            </div>
+
+            <div class="form-group">
+              <label>Job</label>
+              <input type="text" class="form-control" value="{{ application.job.job_title }} - {{ application.job.company.name }}" readonly>
+            </div>
+
+            <!-- About Section -->
+            <div class="form-group">
+              <label for="about">About / Cover Letter</label>
+              <textarea class="form-control" id="about" name="about" 
+                        rows="6" placeholder="Tell us about yourself...">{{ application.about }}</textarea>
+            </div>
+
+            <!-- Status -->
+            <div class="form-group">
+              <label for="status">Status *</label>
+              <select class="form-control" id="status" name="status" required>
+                <option value="">-- Select Status --</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if application.status == value %}selected{% endif %}>
+                  {{ label }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Resume Upload -->
+            <div class="form-group">
+              <label for="resume">Replace Resume (Optional)</label>
+              <div class="custom-file">
+                <input type="file" class="custom-file-input" id="resume" name="resume" accept=".pdf">
+                <label class="custom-file-label" for="resume">Choose new PDF file...</label>
+              </div>
+              <small class="form-text text-muted">
+                <i class="fas fa-info-circle"></i> Current resume: 
+                {% if application.resume %}
+                  <a href="{{ application.resume.url }}" target="_blank">{{ application.resume.name|cut:"resumes/" }}</a>
+                {% else %}
+                  No resume uploaded
+                {% endif %}
+                <br>Only PDF files allowed. Maximum file size: 5MB.
+                New resume will replace the current one with the same naming format.
+              </small>
+              <div id="fileSizeError" class="text-danger" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i> File size exceeds 5MB limit.
+              </div>
+              <div id="fileTypeError" class="text-danger" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i> Only PDF files are allowed.
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-group">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Update Application
+              </button>
+              <a href="{% url 'job_applications_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+$(document).ready(function() {
+  // File input display
+  $('#resume').on('change', function() {
+    const fileName = $(this).val().split('\\').pop();
+    $(this).next('.custom-file-label').addClass("selected").html(fileName);
+    
+    // Reset error messages
+    $('#fileSizeError').hide();
+    $('#fileTypeError').hide();
+    
+    // Validate file
+    const file = this.files[0];
+    if (file) {
+      // Check file type
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        $('#fileTypeError').show();
+        $(this).val('');
+        $(this).next('.custom-file-label').html('Choose PDF file...');
+        return;
+      }
+      
+      // Check file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        $('#fileSizeError').show();
+        $(this).val('');
+        $(this).next('.custom-file-label').html('Choose PDF file...');
+        return;
+      }
+    }
+  });
+
+  // Form validation
+  $('#editApplicationForm').on('submit', function(e) {
+    const status = $('#status').val();
+    
+    if (!status) {
+      e.preventDefault();
+      alert('Please select a status');
+      $('#status').focus();
+      return false;
+    }
+    
+    return true;
+  });
+});
+</script>
+{% endblock %}

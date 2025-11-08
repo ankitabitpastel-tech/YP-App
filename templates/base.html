@@ -83,18 +83,30 @@
             <p>Companies</p>
           </a>
         </li>
-        <li class="nav-item">
+        <!-- <li class="nav-item">
           <a href="{% url 'company_followers_list' %}" class="nav-link {% if request.resolver_match.url_name == ' company_followers_list' %}active{% endif %}">
             <i class="nav-icon fas fa-user-friends"></i>
             <p>Company followers</p>
           </a>
-        </li>
+        </li> -->
         <li class="nav-item">
           <a href="{% url 'job_posts_list' %}" class="nav-link {% if request.resolver_match.url_name == 'job_posts_list' %}active{% endif %}">
             <i class="nav-icon fas fa-briefcase"></i>
-            <p>Job Posts</p>
+            <p>Jobs</p>
           </a>
-        </li>        
+        </li>  
+        <li class="nav-item">
+          <a href="{% url 'job_applications_list' %}" class="nav-link {% if request.resolver_match.url_name == 'job_applications_list' %}active{% endif %}">
+            <i class="nav-icon fas fa-user-tie"></i>
+            <p>Job Applications</p>
+          </a>
+        </li> 
+        <li class="nav-item">
+          <a href="{% url 'articles_list' %}" class="nav-link {% if request.resolver_match.url_name == 'articles_list' %}active{% endif %}">
+            <i class="nav-icon fas fa-newspaper"></i>
+            <p>Articles</p>
+          </a>
+        </li>           
       </ul>
     </nav>
   </div>

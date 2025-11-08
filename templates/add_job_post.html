@@ -20,7 +20,7 @@
         </div>
         <div class="card-body">
           <!-- Display Messages -->
-          {% if messages %}
+          <!-- {% if messages %}
             {% for message in messages %}
               <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
                 {{ message }}
@@ -29,9 +29,9 @@
                 </button>
               </div>
             {% endfor %}
-          {% endif %}
+          {% endif %} -->
 
-          <form method="POST" id="jobPostForm">
+          <form method="POST" id="jobPostForm" novalidate>
             {% csrf_token %}
             
             <!-- Company Selection -->
@@ -138,51 +138,23 @@
 
 {% block extra_scripts %}
 <script>
-$(document).ready(function() {
-  // Form validation
-  $('#jobPostForm').on('submit', function(e) {
-    const companyId = $('#company_id').val();
-    const jobTitle = $('#job_title').val().trim();
-    
-    if (!companyId) {
-      e.preventDefault();
-      alert('Please select a company');
-      $('#company_id').focus();
-      return false;
-    }
-    
-    if (!jobTitle) {
-      e.preventDefault();
-      alert('Please enter a job title');
-      $('#job_title').focus();
-      return false;
-    }
-    
-    // Optional: Add more validation as needed
-    return true;
-  });
+$('#jobPostForm').on('submit', function(e) {
+  let isValid = true;
+  $('.error-text').remove(); // clear old errors
 
-  // Set minimum date for application deadline to today
-  const today = new Date().toISOString().split('T')[0];
-  $('#application_deadline').attr('min', today);
+  if (!$('#company_id').val()) {
+    e.preventDefault();
+    $('#company_id').after('<small class="error-text text-danger">Please select a company.</small>');
+    isValid = false;
+  }
 
-  // Auto-save functionality (optional)
-  let formChanged = false;
-  $('#jobPostForm').on('change', function() {
-    formChanged = true;
-  });
+  if (!$('#job_title').val().trim()) {
+    e.preventDefault();
+    $('#job_title').after('<small class="error-text text-danger">Job title is required.</small>');
+    isValid = false;
+  }
 
-  // Warn user if they try to leave with unsaved changes
-  $(window).on('beforeunload', function() {
-    if (formChanged) {
-      return 'You have unsaved changes. Are you sure you want to leave?';
-    }
-  });
-
-  // Reset form changed flag when form is submitted
-  $('#jobPostForm').on('submit', function() {
-    formChanged = false;
-  });
+  return isValid;
 });
 </script>
 

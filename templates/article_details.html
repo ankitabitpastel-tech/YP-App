@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Article Details - BitPastel{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Back Button -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <a href="{% url 'articles_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Articles List
+            </a>
+        </div>
+    </div>
+
+    <!-- Article Details Card -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="card-title mb-0">
+                        <i class="fas fa-file-alt"></i> Article Details
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Article Image -->
+                    {% if article.image %}
+                    <div class="row mb-4">
+                        <div class="col-12 text-center">
+                            <img src="{{ article.image.url }}" alt="{{ article.title }}" 
+                                 class="img-fluid rounded" style="max-height: 400px; object-fit: cover;">
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <!-- Basic Information -->
+                        <div class="col-md-6">
+                            <h5 class="text-primary">Basic Information</h5>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th style="width: 30%;">Title</th>
+                                    <td>{{ article.title }}</td>
+                                </tr>
+                                <tr>
+                                    <th>Company</th>
+                                    <td>
+                                        {% if company_md5 %}
+                                            <a href="{% url 'company_details' encrypted_id=company_md5 %}" class="text-decoration-none">
+                                                <i class="fas fa-building"></i> {{ article.company.name }}
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">
+                                                <i class="fas fa-building"></i> {{ article.company.name|default:"No Company" }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Category</th>
+                                    <td>
+                                        <span class="badge bg-info">
+                                            {{ article.get_category_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Status</th>
+                                    <td>
+                                        <span class="badge {% if article.status == '1' %}bg-success{% else %}bg-warning{% endif %}">
+                                            {{ article.get_status_display }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Timestamps -->
+                        <div class="col-md-6">
+                            <h5 class="text-primary">Timestamps</h5>
+                            <table class="table table-bordered">
+                                <tr>
+                                    <th style="width: 30%;">Published At</th>
+                                    <td>
+                                        {% if article.published_at %}
+                                            <i class="fas fa-calendar"></i> {{ article.published_at|date:"M d, Y" }}
+                                            <small class="text-muted">at {{ article.published_at|date:"g:i A" }}</small>
+                                        {% else %}
+                                            <span class="text-muted">Not published</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>Last Updated</th>
+                                    <td>
+                                        {% if article.updated_at %}
+                                            <i class="fas fa-calendar"></i> {{ article.updated_at|date:"M d, Y" }}
+                                            <small class="text-muted">at {{ article.updated_at|date:"g:i A" }}</small>
+                                        {% else %}
+                                            <span class="text-muted">Never updated</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Article Content -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <h5 class="text-primary">Content</h5>
+                            <div class="card">
+                                <div class="card-body">
+                                    {% if article.content %}
+                                        <div class="content-area" style="line-height: 1.6; font-size: 16px;">
+                                            {{ article.content|linebreaks }}
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted font-italic">No content available for this article.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-end">
+                                <div class="btn-group">
+                                    {% if article_md5 %}
+                                        <a href="{% url 'edit_article' article_md5 %}" class="btn btn-warning">
+                                            <i class="fas fa-edit"></i> Edit Article
+                                        </a>
+                                        <a href="{% url 'delete_article' article_md5 %}" class="btn btn-danger" 
+                                           onclick="return confirm('Are you sure you want to delete this article? This action cannot be undone.')">
+                                            <i class="fas fa-trash"></i> Delete Article
+                                        </a>
+                                    {% else %}
+                                        <button class="btn btn-warning" disabled title="Edit unavailable">
+                                            <i class="fas fa-edit"></i> Edit Article
+                                        </button>
+                                        <button class="btn btn-danger" disabled title="Delete unavailable">
+                                            <i class="fas fa-trash"></i> Delete Article
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.content-area {
+    line-height: 1.6;
+    font-size: 16px;
+}
+
+.content-area p {
+    margin-bottom: 1rem;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+.badge {
+    font-size: 0.85em;
+}
+</style>
+{% endblock %}

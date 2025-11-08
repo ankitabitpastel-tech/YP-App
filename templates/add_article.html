@@ -1,0 +1,322 @@
+{% extends 'base.html' %}
+{% block title %}Add Article - Management{% endblock %}
+{% load static %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+      <h1 class="h3 mb-0">Add New Article</h1>
+      <a href="{% url 'articles_list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to List
+      </a>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Create New Article</h3>
+        </div>
+        <div class="card-body">
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          <form method="POST" id="articleForm" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            
+            <!-- Company Selection -->
+            <div class="form-group">
+              <label for="company_id">Company *</label>
+              <select class="form-control" id="company_id" name="company_id" required>
+                <option value="">-- Select Company --</option>
+                {% for comp in companies %}
+                <option value="{{ comp.md5_id }}">{{ comp.name }} ({{ comp.email }})</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Article Title -->
+            <div class="form-group">
+              <label for="title">Article Title *</label>
+              <input type="text" class="form-control" id="title" name="title" required 
+                     placeholder="Enter article title" maxlength="255">
+            </div>
+
+            <!-- Category -->
+            <div class="form-group">
+              <label for="category">Category *</label>
+              <select class="form-control" id="category" name="category" required>
+                <option value="">-- Select Category --</option>
+                {% for value, label in categories %}
+                <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <!-- Article Content -->
+            <div class="form-group">
+              <label for="content">Content *</label>
+              <textarea class="form-control" id="content" name="content" 
+                        rows="10" required placeholder="Write your article content here..."></textarea>
+            </div>
+
+            <!-- Image Upload with Simple Cropping -->
+            <div class="form-group">
+              <label for="image">Featured Image (Optional)</label>
+              <div class="custom-file">
+                <input type="file" class="custom-file-input" id="image" name="image" accept="image/*">
+                <label class="custom-file-label" for="image">Choose image file...</label>
+              </div>
+              <small class="form-text text-muted">
+                <i class="fas fa-info-circle"></i> Recommended size: 1200x630px (16:9 ratio). Maximum file size: 2MB.
+                Supported formats: JPEG, PNG, GIF, WebP.
+              </small>
+              
+              <!-- Hidden input for cropped image -->
+              <input type="file" id="croppedFileInput" name="cropped_image" style="display: none;">
+              
+              <!-- Simple Image Preview -->
+              <div id="imagePreviewSection" class="mt-3" style="display: none;">
+                <h6>Image Preview</h6>
+                <div class="text-center">
+                  <img id="previewImage" src="#" alt="Preview" class="img-fluid rounded" style="max-height: 200px; display: none;">
+                </div>
+              </div>
+              
+              <div id="fileSizeError" class="text-danger mt-2" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i> File size exceeds 2MB limit.
+              </div>
+              <div id="fileTypeError" class="text-danger mt-2" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i> Only image files are allowed.
+              </div>
+            </div>
+
+            <!-- Status -->
+            <div class="form-group">
+              <label for="status">Status</label>
+              <select class="form-control" id="status" name="status">
+                <option value="1" selected>Active</option>
+                <option value="0">Inactive</option>
+              </select>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-group">
+              <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Create Article
+              </button>
+              <a href="{% url 'articles_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Crop Modal -->
+<div class="modal fade" id="cropModal" tabindex="-1" aria-labelledby="cropModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="cropModalLabel">Crop Image</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center">
+          <img id="cropImage" src="#" alt="Crop preview" style="max-width: 100%; max-height: 500px;">
+        </div>
+        <div class="mt-3">
+          <small class="text-muted">Drag to crop the image. Recommended aspect ratio: 16:9</small>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="cropBtn">Crop Image</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<!-- Include CropperJS CSS & JS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  let cropper;
+  const imageInput = document.getElementById("image");
+  const cropImage = document.getElementById("cropImage");
+  const cropModalEl = document.getElementById("cropModal");
+  const cropModal = new bootstrap.Modal(cropModalEl);
+  const cropBtn = document.getElementById("cropBtn");
+  const croppedFileInput = document.getElementById("croppedFileInput");
+  const previewImage = document.getElementById("previewImage");
+  const previewSection = document.getElementById("imagePreviewSection");
+
+  imageInput.addEventListener("change", (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Check file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      $('#fileTypeError').show();
+      imageInput.value = '';
+      $(imageInput).next('.custom-file-label').html('Choose image file...');
+      return;
+    }
+    
+    // Check file size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      $('#fileSizeError').show();
+      imageInput.value = '';
+      $(imageInput).next('.custom-file-label').html('Choose image file...');
+      return;
+    }
+
+    // Update file label
+    $(imageInput).next('.custom-file-label').addClass("selected").html(file.name);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      cropImage.src = e.target.result;
+      cropModal.show();
+
+      if (cropper) cropper.destroy();
+      cropper = new Cropper(cropImage, {
+        aspectRatio: 16 / 9,
+        viewMode: 1,
+        autoCropArea: 0.8,
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+
+  cropBtn.addEventListener("click", () => {
+    cropper.getCroppedCanvas({
+      width: 1200,
+      height: 675,
+    }).toBlob((blob) => {
+      const file = new File([blob], "cropped_article.jpg", { type: "image/jpeg" });
+
+      // Put cropped file into hidden input
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      croppedFileInput.files = dataTransfer.files;
+
+      // Show preview of cropped image
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        previewImage.src = e.target.result;
+        previewImage.style.display = 'block';
+        previewSection.style.display = 'block';
+      };
+      reader.readAsDataURL(blob);
+
+      cropModal.hide();
+    }, "image/jpeg", 0.9);
+  });
+
+  // Form validation
+const form = document.getElementById('articleForm');
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    let valid = true;
+
+    // Clear previous error messages
+    document.querySelectorAll('.text-danger.small').forEach(el => el.remove());
+
+    const company = document.getElementById('company_id');
+    const title = document.getElementById('title');
+    const category = document.getElementById('category');
+    const content = document.getElementById('content');
+
+    if (company.value.trim() === '') {
+      showError(company, 'Please select a company.');
+      valid = false;
+    }
+
+    if (title.value.trim() === '') {
+      showError(title, 'Please enter article title.');
+      valid = false;
+    }
+
+    if (category.value.trim() === '') {
+      showError(category, 'Please select a category.');
+      valid = false;
+    }
+
+    if (content.value.trim() === '') {
+      showError(content, 'Please enter article content.');
+      valid = false;
+    }
+
+    if (valid) {
+      form.submit();
+    }
+  });
+
+  function showError(element, message) {
+    const error = document.createElement('small');
+    error.classList.add('text-danger', 'small', 'd-block', 'mt-1');
+    error.textContent = message;
+    element.closest('.form-group').appendChild(error);
+  }
+
+});
+
+  // Unsaved changes warning
+  let formChanged = false;
+  $('#articleForm').on('change keyup', function() {
+    formChanged = true;
+  });
+
+  $(window).on('beforeunload', function() {
+    if (formChanged) {
+      return 'You have unsaved changes. Are you sure you want to leave?';
+    }
+  });
+
+  $('#articleForm').on('submit', function() {
+    formChanged = false;
+  });
+
+</script>
+
+<style>
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.custom-file-label::after {
+  content: "Browse";
+}
+
+#previewImage {
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  padding: 5px;
+  background-color: #f8f9fa;
+}
+
+.cropper-view-box,
+.cropper-face {
+  border-radius: 4px;
+}
+</style>
+{% endblock %}

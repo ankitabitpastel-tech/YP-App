@@ -19,7 +19,7 @@
           <h3 class="card-title">Edit Job Post: {{ job_post.job_title }}</h3>
         </div>
         <div class="card-body">
-          {% if messages %}
+          <!-- {% if messages %}
             {% for message in messages %}
               <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
                 {{ message }}
@@ -28,7 +28,7 @@
                 </button>
               </div>
             {% endfor %}
-          {% endif %}
+          {% endif %} -->
 
           <form method="POST" id="jobPostForm">
             {% csrf_token %}

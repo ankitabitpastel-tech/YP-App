@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% block title %}Job Application Details - Management{% endblock %}
+{% load static %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+      <h1 class="h3 mb-0">Job Application Details</h1>
+      <a href="{% url 'job_applications_list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to List
+      </a>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Application: {{ application.user.full_name }} - {{ application.job.job_title }}</h3>
+          <span class="badge badge-{% if application.status == '0' %}warning{% elif application.status == '1' %}success{% elif application.status == '2' %}danger{% else %}secondary{% endif %} float-right">
+            {{ application.get_status_display }}
+          </span>
+        </div>
+        <div class="card-body">
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <h5>Applicant Information</h5>
+              <table class="table table-bordered">
+                <tr>
+                  <th width="30%">Name:</th>
+                  <td><a href="{% url 'user_details' user_md5 %}">{{ application.user.full_name }}</a></td>
+                </tr>
+                <tr>
+                  <th>Email:</th>
+                  <td>{{ application.user.email }}</td>
+                </tr>
+                <tr>
+                  <th>Phone:</th>
+                  <td>{{ application.user.phone_no|default:"Not provided" }}</td>
+                </tr>
+              </table>
+            </div>
+            <div class="col-md-6">
+              <h5>Job Information</h5>
+              <table class="table table-bordered">
+                <tr>
+                  <th width="30%">Job Title:</th>
+                  <td><a href="{% url 'job_post_details' job_md5 %}">{{ application.job.job_title }}</a></td>
+                </tr>
+                <tr>
+                  <th>Company:</th>
+                  <td><a href="{% url 'company_details' company_md5 %}">{{ application.job.company.name }}</a></td>
+                </tr>
+                <tr>
+                  <th>Requirements:</th>
+                  <td>{{ application.job.requirements|default:"Not specified" }}</td>
+                </tr>
+                <tr>
+                  <th>Location:</th>
+                  <td>{{ application.job.location|default:"Not specified" }}</td>
+                </tr>
+                <tr>
+                  <th>Applied On:</th>
+                  <td>{{ application.applied_at|date:"Y-m-d H:i" }}</td>
+                </tr>
+                <tr>
+                  <th>Last Updated:</th>
+                  <td>{{ application.updated_at|date:"Y-m-d H:i"|default:"Never" }}</td>
+                </tr>
+              </table>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-12">
+              <h5>About / Cover Letter</h5>
+              <div class="card">
+                <div class="card-body">
+                  {% if application.about %}
+                    {{ application.about|linebreaks }}
+                  {% else %}
+                    <p class="text-muted">No cover letter provided.</p>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mt-4">
+            <div class="col-12">
+              <h5>Resume</h5>
+              <div class="card">
+                <div class="card-body">
+                  {% if application.resume %}
+                    <a href="{{ application.resume.url }}" class="btn btn-primary" target="_blank">
+                      <i class="fas fa-download"></i> Download Resume
+                    </a>
+                    <small class="text-muted ml-3">File: {{ application.resume.name|cut:"resumes/" }}</small>
+                  {% else %}
+                    <p class="text-muted">No resume uploaded.</p>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="row mt-4">
+            <div class="col-12">
+              <div class="btn-group">
+                <a href="{% url 'edit_job_application' application.md5_id %}" class="btn btn-warning">
+                  <i class="fas fa-edit"></i> Edit Application
+                </a>
+                <a href="{% url 'job_applications_list' %}" class="btn btn-secondary">Back to List</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

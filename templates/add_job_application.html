@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% block title %}Add Job Application - Management{% endblock %}
+{% load static %}
+{% block content %}
+<div class="container-fluid">
+  <div class="row mb-4">
+    <div class="col-12 d-flex justify-content-between align-items-center">
+      <h1 class="h3 mb-0">Add Job Application</h1>
+      <a href="{% url 'job_applications_list' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to List
+      </a>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Create New Job Application</h3>
+        </div>
+        <div class="card-body">
+          <!-- Display Messages -->
+          {% if messages %}
+            {% for message in messages %}
+              <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+            {% endfor %}
+          {% endif %}
+
+          <form method="POST" id="jobApplicationForm" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            
+            <!-- Job Selection -->
+            <div class="form-group">
+              <label for="job_id">Job *</label>
+              <select class="form-control" id="job_id" name="job_id" required onchange="loadUsers()">
+                <option value="">-- Select Job --</option>
+                {% for job in jobs %}
+                <option value="{{ job.md5_id }}">{{ job.job_title }} - {{ job.company.name }}</option>
+                {% endfor %}
+              </select>
+              <small class="form-text text-muted">Select the job the user is applying for</small>
+            </div>
+
+            <!-- User Selection -->
+            <div class="form-group">
+              <label for="user_id">Applicant *</label>
+              <select class="form-control" id="user_id" name="user_id" required disabled>
+                <option value="">-- First select a job --</option>
+              </select>
+              <small class="form-text text-muted">Only users who haven't applied for this job are shown</small>
+            </div>
+
+            <!-- About Section -->
+            <div class="form-group">
+              <label for="about">About / Cover Letter</label>
+              <textarea class="form-control" id="about" name="about" 
+                        rows="6" placeholder="Tell us about yourself, why you're interested in this position, your qualifications, etc."></textarea>
+              <small class="form-text text-muted">This is the cover letter or about section for the application</small>
+            </div>
+
+            <!-- Resume Upload -->
+            <div class="form-group">
+              <label for="resume">Resume *</label>
+              <div class="custom-file">
+                <input type="file" class="custom-file-input" id="resume" name="resume" accept=".pdf" required>
+                <label class="custom-file-label" for="resume">Choose PDF file...</label>
+              </div>
+              <small class="form-text text-muted">
+                <i class="fas fa-info-circle"></i> Only PDF files are allowed. Maximum file size: 5MB.
+                Files will be saved as: username_timestamp.pdf
+              </small>
+              <div id="fileSizeError" class="text-danger" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i> File size exceeds 5MB limit.
+              </div>
+              <div id="fileTypeError" class="text-danger" style="display: none;">
+                <i class="fas fa-exclamation-triangle"></i> Only PDF files are allowed.
+              </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="form-group">
+              <button type="submit" class="btn btn-primary" id="submitBtn">
+                <i class="fas fa-paper-plane"></i> Submit Application
+              </button>
+              <a href="{% url 'job_applications_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function loadUsers() {
+  const jobId = $('#job_id').val();
+  const userSelect = $('#user_id');
+  const submitBtn = $('#submitBtn');
+  
+  if (!jobId) {
+    userSelect.html('<option value="">-- First select a job --</option>');
+    userSelect.prop('disabled', true);
+    submitBtn.prop('disabled', true);
+    return;
+  }
+  
+  // Show loading state
+  userSelect.html('<option value="">Loading applicants...</option>');
+  userSelect.prop('disabled', true);
+  submitBtn.prop('disabled', true);
+  
+  // Fetch users via AJAX
+  $.get(`/job-applications/get-users/?job_id=${jobId}`, function(data) {
+    console.log('Users data:', data);
+    
+    if (data.users && data.users.length > 0) {
+      let options = '<option value="">-- Select Applicant --</option>';
+      data.users.forEach(function(user) {
+        options += `<option value="${user.id}">${user.name} (${user.email})</option>`;
+      });
+      userSelect.html(options);
+      userSelect.prop('disabled', false);
+      submitBtn.prop('disabled', false);
+    } else {
+      userSelect.html('<option value="">No available applicants for this job</option>');
+      userSelect.prop('disabled', true);
+      submitBtn.prop('disabled', true);
+    }
+  }).fail(function(xhr, status, error) {
+    console.log('AJAX Error:', error);
+    userSelect.html('<option value="">Error loading applicants</option>');
+    userSelect.prop('disabled', true);
+    submitBtn.prop('disabled', true);
+  });
+}
+
+// File input display
+$(document).ready(function() {
+  // Show selected file name
+  $('#resume').on('change', function() {
+    const fileName = $(this).val().split('\\').pop();
+    $(this).next('.custom-file-label').addClass("selected").html(fileName);
+    
+    // Reset error messages
+    $('#fileSizeError').hide();
+    $('#fileTypeError').hide();
+    
+    // Validate file
+    const file = this.files[0];
+    if (file) {
+      // Check file type
+      if (!file.name.toLowerCase().endsWith('.pdf')) {
+        $('#fileTypeError').show();
+        $(this).val('');
+        $(this).next('.custom-file-label').html('Choose PDF file...');
+        return;
+      }
+      
+      // Check file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        $('#fileSizeError').show();
+        $(this).val('');
+        $(this).next('.custom-file-label').html('Choose PDF file...');
+        return;
+      }
+    }
+  });
+
+  // Form validation
+  // $('#jobApplicationForm').on('submit', function(e) {
+  //   const jobId = $('#job_id').val();
+  //   const userId = $('#user_id').val();
+  //   const resume = $('#resume').val();
+    
+  //   if (!jobId) {
+  //     e.preventDefault();
+  //     alert('Please select a job');
+  //     $('#job_id').focus();
+  //     return false;
+  //   }
+    
+  //   if (!userId) {
+  //     e.preventDefault();
+  //     alert('Please select an applicant');
+  //     $('#user_id').focus();
+  //     return false;
+  //   }
+    
+  //   if (!resume) {
+  //     e.preventDefault();
+  //     alert('Please upload a resume file');
+  //     $('#resume').focus();
+  //     return false;
+  //   }
+    
+  //   return true;
+  // });
+$('#jobApplicationForm').on('submit', function(e) {
+  $('.error-text').remove(); // clear previous errors
+  let valid = true;
+
+  if (!$('#job_id').val()) {
+    e.preventDefault();
+    $('#job_id').after('<small class="error-text text-danger">Please select a job.</small>');
+    valid = false;
+  }
+
+  if (!$('#user_id').val()) {
+    e.preventDefault();
+    $('#user_id').after('<small class="error-text text-danger">Please select an applicant.</small>');
+    valid = false;
+  }
+
+  if (!$('#resume').val()) {
+    e.preventDefault();
+    $('#resume').closest('.form-group').append('<small class="error-text text-danger">Please upload a resume.</small>');
+    valid = false;
+  }
+
+  return valid;
+});
+
+  // Initialize
+  $('#job_id').change();
+});
+
+// Unsaved changes warning
+let formChanged = false;
+$('#jobApplicationForm').on('change keyup', function() {
+  formChanged = true;
+});
+
+$(window).on('beforeunload', function() {
+  if (formChanged) {
+    return 'You have unsaved changes. Are you sure you want to leave?';
+  }
+});
+
+$('#jobApplicationForm').on('submit', function() {
+  formChanged = false;
+});
+</script>
+
+<style>
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.custom-file-label::after {
+  content: "Browse";
+}
+
+.required::after {
+  content: " *";
+  color: #e74a3b;
+}
+
+.card {
+  box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+  border: 1px solid #e3e6f0;
+}
+
+.card-header {
+  background-color: #f8f9fc;
+  border-bottom: 1px solid #e3e6f0;
+}
+
+.btn-group .btn {
+  margin-right: 0.25rem;
+}
+
+.badge {
+  font-size: 0.75rem;
+  padding: 0.375rem 0.75rem;
+}
+</style>
+{% endblock %}

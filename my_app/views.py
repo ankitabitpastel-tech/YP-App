@@ -1,9 +1,10 @@
+import os
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
-from .models import user, company, company_followers, job_posts
+from .models import user, company, company_followers, job_posts, job_applications, articles
 from django.views.decorators.csrf import csrf_protect
-from .utils import encrypt_id, get_user_by_encrypted_id, get_company_by_encrypted_id, get_company_follower_by_encrypted_id, get_job_post_by_encrypted_id
+from .utils import encrypt_id, get_user_by_encrypted_id, get_company_by_encrypted_id, get_company_follower_by_encrypted_id, get_job_post_by_encrypted_id, get_job_application_by_encrypted_id, get_article_by_encrypted_id
 from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 from django.core.paginator import Paginator
@@ -72,6 +73,10 @@ def dashboard(request):
     total_users= user.objects.exclude(status='5').count()
     total_companies= company.objects.exclude(status='5').count()
     total_follows= company_followers.objects.exclude(status='0').count()
+    total_jobs= job_posts.objects.exclude(status='5').count()
+    total_job_applications= job_applications.objects.exclude(status='5').count()
+    total_articles= articles.objects.exclude(status='5').count()
+
 
 
     context = {
@@ -79,7 +84,9 @@ def dashboard(request):
         'total_users': total_users,
         'total_companies': total_companies,
         'total_follows': total_follows,
-
+        'total_jobs': total_jobs,
+        'total_job_applications': total_job_applications,
+        'total_articles': total_articles,
 
 
     }
@@ -401,9 +408,13 @@ def edit_company(request, encrypted_id):
 @super_admin_required
 def company_details(request, encrypted_id):
     company_obj = get_company_by_encrypted_id(encrypted_id)
-        
+    follower_count = company_followers.objects.filter(
+        company=company_obj, 
+        status='1'
+    ).count()    
     company_obj.md5_id = encrypt_id(company_obj.id)
-    
+    company_obj.follower_count = follower_count
+
     context = {
         'company_obj': company_obj,
         'current_user': user.objects.get(id=request.session.get('user_id'))
@@ -538,7 +549,7 @@ def company_followers_data(request):
                 "company_name": f"<a href='/companies/details/{company_md5}/'>{follower.company.name}</a>",
                 "company_email": follower.company.email,
                 "updated_at": follower.updated_at.strftime('%Y-%m-%d %H:%M:%S')if follower.updated_at else "",
-                "status": "<span class='badge badge-success'>Following</span>",
+                # "status": "<span class='badge badge-success'>Following</span>",
                 "actions": f"""
                     <div class='btn-group'>
                         <a href='/company_followers/unfollow/{encrypt_id(follower.id)}/' 
@@ -909,3 +920,576 @@ def delete_job_post(request, encrypted_id):
         print(f'Error deleting job post: {str(e)}')
     
     return redirect('job_posts_list')
+
+@super_admin_required
+def job_applications_list(request):
+    context={
+        'current_user': user.objects.get(id=request.session.get('user_id'))
+    }
+    return render (request, 'job_applications_list.html', context)
+
+@super_admin_required
+def job_applications_data(request):
+    try:
+        draw = int(request.GET.get('draw', 1))
+        start = int(request.GET.get('start', 0))
+        length = int(request.GET.get('length', 10))
+        search_value = request.GET.get('search[value]', '')
+        job_filter = request.GET.get('job_filter', '')
+        status_filter = request.GET.get('status_filter', '')
+        
+        queryset = job_applications.objects.exclude(status='5').select_related('job', 'user', 'job__company')
+
+        if search_value:
+            queryset = queryset.filter(
+                Q(user__full_name__icontains=search_value) |
+                Q(user__email__icontains=search_value) |
+                Q(job__job_title__icontains=search_value) |
+                Q(job__company__name__icontains=search_value) |
+                Q(about__icontains=search_value)
+            )
+        if job_filter:
+            job_obj = get_job_post_by_encrypted_id(job_filter)
+            if job_obj:
+                queryset = queryset.filter(job=job_obj)
+
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+
+        request_total = job_applications.objects.exclude(status='5').count()
+        record_filtered = queryset.count()
+
+        queryset = queryset.order_by('-applied_at')
+
+        paginator = Paginator(queryset, length)
+        page_number = start // length + 1
+        page = paginator.get_page(page_number)
+
+        data = []
+        for application in page:
+            user_md5 = encrypt_id(application.user.id)
+            job_md5 = encrypt_id(application.job.id)
+            application_md5 = encrypt_id(application.id)
+
+            status_badges = {
+                '0': '<span class="badge badge-warning">Applied</span>',
+                '1': '<span class="badge badge-success">Approved</span>',
+                '2': '<span class="badge badge-danger">Rejected</span>',
+                '3': '<span class="badge badge-secondary">Withdrawn</span>',
+            }
+            resume_link = ''
+            if application.resume:
+                resume_link = f'<a href="{application.resume.url}" class="btn btn-sm btn-outline-primary" target="_blank" title="Download Resume"><i class="fas fa-download"></i></a>'
+            else:
+                resume_link = '<span class="text-muted">No resume</span>'
+
+            data.append({
+                "applicant_name": f"<a href='/users/details/{user_md5}/'>{application.user.full_name}</a>",
+                "applicant_email": application.user.email,
+                "job_title": f"<a href='/job-posts/details/{job_md5}/'>{application.job.job_title}</a>",
+                "company": application.job.company.name,
+                "applied_at": application.applied_at.strftime('%Y-%m-%d %H:%M'),
+                "status": status_badges.get(application.status, '<span class="badge badge-secondary">Unknown</span>'),
+                "resume": resume_link,
+                "actions": f"""
+                    <div class='btn-group'>
+                        <a href='/job_application/details/{application_md5}/' class='btn btn-sm btn-primary' title="View Details">
+                            <i class='fas fa-eye'></i>
+                        </a>
+
+                        <a href='/job_application/edit/{application_md5}/' class='btn btn-sm btn-warning'>
+                            <i class='fas fa-edit'></i>
+                        </a>
+                        <a href='/job_application/delete/{application_md5}/' class='btn btn-sm btn-danger' 
+                           onclick="return confirm('Are you sure you want to delete this application?')">
+                            <i class='fas fa-trash'></i>
+                        </a>
+                    </div>
+                """
+            })
+
+        response_data = {
+            "draw": draw,
+            "recordsTotal": request_total,
+            "recordsFiltered": record_filtered,
+            "data": data
+        }
+        
+        return JsonResponse(response_data)
+        
+    except Exception as e:
+        return JsonResponse({
+            "draw": 1,
+            "recordsTotal": 0,
+            "recordsFiltered": 0,
+            "data": [],
+            "error": str(e)
+        })
+
+@super_admin_required
+def add_job_application(request):
+    if request.method == 'POST':
+        try: 
+            job_id = request.POST.get('job_id')
+            user_id = request.POST.get('user_id')
+            about = request.POST.get('about', '')
+            resume = request.FILES.get('resume')
+
+            if not job_id or not user_id:
+                messages.error(request, 'Job and User are required.')
+                return redirect('add_job_application')
+
+            if not resume:
+                messages.error(request, 'Resume file is required.')
+                return redirect('add_job_application')
+            
+            job_obj = get_job_post_by_encrypted_id(job_id)
+            user_obj = get_user_by_encrypted_id(user_id)
+
+            if not job_obj or not user_obj:
+                messages.error(request, 'Invalid job or user selected.')
+                return redirect('add_job_application')
+
+            existing_application = job_applications.objects.filter(
+                job=job_obj, 
+                user=user_obj
+            ).exclude(status='5').first()
+
+            if existing_application:
+                messages.warning(request, f'{user_obj.full_name} has already applied for this job!')
+                return redirect('add_job_application')
+
+            if resume:
+                if resume.size > 5 * 1024 * 1024:
+                    messages.error(request, 'Resume file size must be less than 5MB.')
+
+                    return redirect ('add_job_application')
+                
+                if not resume.name.lower().endswith('.pdf'):
+                    messages.error(request, 'Only PDF files are allowed for resumes.')
+                    return redirect('add_job_application')
+                
+                new_application= job_applications(
+                    job=job_obj,
+                    user=user_obj,
+                    about=about,
+                    resume=resume,
+                    status='0'  
+                )
+                new_application.save()
+
+            messages.success(request, f'Job application for {user_obj.full_name} added successfully!')
+            return redirect('job_applications_list')
+
+        except Exception as e:
+            print(f'Error adding job application: {str(e)}')
+            messages.error(request, f'Error adding job application: {str(e)}')
+            return redirect('add_job_application')
+    
+    available_jobs = job_posts.objects.filter(status='1')
+    available_users = user.objects.exclude(status='5').exclude(role='0')
+
+    for job in available_jobs:
+        job.md5_id = encrypt_id(job.id)
+    for usr in available_users:
+        usr.md5_id = encrypt_id(usr.id)
+
+    context = {
+        'current_user': user.objects.get(id=request.session.get('user_id')),
+        'jobs': available_jobs,
+        'users': available_users
+    }
+    return render(request, 'add_job_application.html', context)
+
+@super_admin_required
+def get_users_not_applied(request):
+    job_id = request.GET.get('job_id')
+    
+    if not job_id:
+        return JsonResponse({'users': []})
+    
+    try:
+        job_obj = get_job_post_by_encrypted_id(job_id)
+        if not job_obj:
+            return JsonResponse({'users': []})
+
+        all_users = user.objects.exclude(status='5').exclude(role='0')
+        applied_user_ids = job_applications.objects.filter(
+            job=job_obj
+        ).exclude(status='5').values_list('user_id', flat=True)
+
+        available_users = all_users.exclude(id__in=applied_user_ids)
+
+        users_data = []
+        for usr in available_users:
+            users_data.append({
+                'id': encrypt_id(usr.id),
+                'name': usr.full_name,
+                'email': usr.email
+            })
+        
+        return JsonResponse({'users': users_data})
+        
+    except Exception as e:
+        return JsonResponse({'users': [], 'error': str(e)})
+
+@super_admin_required
+def job_application_details(request, encrypted_id):
+    application = get_job_application_by_encrypted_id(encrypted_id)
+
+    application.md5_id = encrypt_id(application.id)
+    user_md5 = encrypt_id(application.user.id)
+    job_md5 = encrypt_id(application.job.id)
+    company_md5 = encrypt_id(application.job.company.id)
+    
+    context = {
+        'application': application,
+        'user_md5': user_md5,
+        'job_md5': job_md5,
+        'company_md5': company_md5,
+        'current_user': user.objects.get(id=request.session.get('user_id'))
+    }
+    return render(request, 'job_application_details.html', context)
+
+@super_admin_required
+def edit_job_application(request, encrypted_id):
+    application = get_job_application_by_encrypted_id(encrypted_id)
+
+    if request.method == "POST":
+        try:
+            about = request.POST.get('about', '')
+            status = request.POST.get('status')
+            resume = request.FILES.get('resume')
+            application.about = about
+            application.status = status
+            if resume:
+                if resume.size > 5 * 1024 * 1024:
+                    messages.error(request, 'Resume file size must be less than 5MB.')
+                    return redirect('edit_job_application', encrypted_id=encrypted_id)
+                if not resume.name.lower().endswith('.pdf'):
+                    messages.error(request, 'Only PDF files are allowed for resumes.')
+                    return redirect('edit_job_application', encrypted_id=encrypted_id)
+
+                if application.resume:
+                    try:
+                        if os.path.isfile(application.resume.path):
+                            os.remove(application.resume.path)
+                    except Exception as e:
+                        print(f"Error deleting old resume: {e}")
+
+                application.resume = resume
+            application.updated_at = timezone.now()
+            application.save()
+
+            messages.success(request, f'Job application for {application.user.full_name} updated successfully!')
+            return redirect('job_applications_list')
+
+        except Exception as e:
+            print(f'Error updating job application: {str(e)}')
+            messages.error(request, f'Error updating job application: {str(e)}')
+            return redirect('edit_job_application', encrypted_id=encrypted_id)
+    context = {
+        'current_user': user.objects.get(id=request.session.get('user_id')),
+        'application': application,
+        'status_choices': [
+            ('0', 'Applied'),
+            ('1', 'Approved'), 
+            ('2', 'Rejected'),
+            ('3', 'Withdrawn')
+        ]
+    }
+    return render(request, 'edit_job_application.html', context)
+
+@super_admin_required
+def delete_job_application(request, encrypted_id):
+    application = get_job_application_by_encrypted_id(encrypted_id)
+
+    try:
+        user_name = application.user.full_name
+        job_title = application.job.job_title
+        application.status ='5'
+        application.save()
+
+
+        messages.success(request, f'application for "{job_title}" deleted successfully!')
+        print(f'Application for "{job_title}" deleted successfully!')
+    except Exception as e:
+        messages.error(request, f'Error deleting job application: {str(e)}')
+        print(f'Error deleting job application: {str(e)}')
+    
+    return redirect('job_applicationsS_list')
+
+@super_admin_required
+def articles_list(request):
+    context = {
+        'current_user': user.objects.get(id=request.session.get('user_id'))
+    }
+    return render(request, 'articles_list.html', context)
+
+@super_admin_required
+def articles_data(request):
+    try:
+        draw = int(request.GET.get('draw', 1))
+        start = int(request.GET.get('start', 0))
+        length = int(request.GET.get('length', 10))
+        search_value = request.GET.get('search[value]', '')
+        category_filter = request.GET.get('category_filter', '')
+        company_filter = request.GET.get('company_filter', '')
+        
+        queryset = articles.objects.exclude(status='5').select_related('company')
+
+
+        if search_value:
+            queryset = queryset.filter(
+                Q(title__icontains=search_value) |
+                Q(content__icontains=search_value) |
+                Q(company__name__icontains=search_value) 
+            )
+
+        if category_filter:
+            queryset = queryset.filter(category=category_filter)
+
+        if company_filter:
+            company_obj = get_company_by_encrypted_id(company_filter)
+            if company_obj:
+                queryset = queryset.filter(company=company_obj)
+
+        records_total = articles.objects.exclude(status='5').count()
+        records_filtered = queryset.count()
+
+        queryset = queryset.order_by('-published_at')
+
+        paginator = Paginator(queryset, length)
+        page_number = start // length + 1
+        page = paginator.get_page(page_number)
+
+        data = []
+        for article in page:
+            company_md5 = encrypt_id(article.company.id)
+            article_md5 = encrypt_id(article.id)
+
+            category_badge = f'<span class="badge badge-info">{article.get_category_display()}</span>'
+            image_thumbnail = ''
+            if article.image:
+                image_thumbnail = f'<img src="{article.image.url}" width="50" height="50" class="rounded" alt="Article Image" style="object-fit: cover;">'
+            else:
+                image_thumbnail = '<span class="text-muted">No Image</span>'
+
+        data.append({
+                "title": article.title,
+                "company": f"<a href='/companies/details/{company_md5}/'>{article.company.name}</a>",
+                "category": category_badge,
+                "image": image_thumbnail,
+                "published_at": article.published_at.strftime('%Y-%m-%d') if article.published_at else "Not published",
+                "actions": f"""
+                    <div class='btn-group'>
+                        <a href='/articles/details/{article_md5}/' class='btn btn-sm btn-primary' title="View Details">
+                            <i class='fas fa-eye'></i>
+                        </a>
+                        <a href='/articles/edit/{article_md5}/' class='btn btn-sm btn-warning' title="Edit">
+                            <i class='fas fa-edit'></i>
+                        </a>
+                        <a href='/articles/delete/{article_md5}/' class='btn btn-sm btn-danger' 
+                           onclick="return confirm('Are you sure you want to delete this article?')" title="Delete">
+                            <i class='fas fa-trash'></i>
+                        </a>
+                    </div>
+                """
+            })
+        response_data = {
+            "draw": draw,
+            "recordsTotal": records_total,
+            "recordsFiltered": records_filtered,
+            "data": data
+        }
+        
+        return JsonResponse(response_data)
+
+    except Exception as e:
+        return JsonResponse({
+            "draw": 1,
+            "recordsTotal": 0,
+            "recordsFiltered": 0,
+            "data": [],
+            "error": str(e)
+        })
+
+@super_admin_required
+def add_article(request):
+    if request.method == "POST":
+        try:
+            company_id = request.POST.get('company_id')
+            title = request.POST.get('title')
+            content = request.POST.get('content')
+            category = request.POST.get('category')
+            image = request.FILES.get('image')  
+            
+            
+            company_obj = get_company_by_encrypted_id(company_id)
+            if not company_obj:
+                messages.error(request, 'Invalid company selected.')
+                return redirect('add_article')
+            if image:
+                if image.size > 2 * 1024 * 1024:
+                    messages.error(request, 'Image size must be less than 2MB.')
+                    return redirect('add_article')
+                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+                if image.content_type not in allowed_types:
+                    messages.error(request, 'Only JPEG, PNG, GIF, and WebP images are allowed.')
+                    return redirect('add_article')
+
+
+            new_article = articles(
+                company=company_obj,
+                title=title,
+                content=content,
+                category=category,
+                image=image
+            )
+            new_article.save()
+
+            messages.success(request, f'Article "{title}" added successfully!')
+            return redirect('articles_list')
+        except Exception as e:
+            print(f'Error adding article: {str(e)}')
+            messages.error(request, f'Error adding article: {str(e)}')
+            return redirect('add_article')
+    available_companies = company.objects.exclude(status='5')
+    for comp in available_companies:
+        comp.md5_id = encrypt_id(comp.id)
+
+    context = {
+        'current_user': user.objects.get(id=request.session.get('user_id')),
+        'companies': available_companies,
+        'categories': articles.CATEGORY_CHOICES
+    }
+    return render(request, 'add_article.html', context)
+
+@super_admin_required
+def edit_article(request, encrypted_id):
+    article = get_article_by_encrypted_id(encrypted_id)
+
+    if request.method == "POST":
+        try:
+            company_id = request.POST.get('company_id')
+            category = request.POST.get('category')
+            title = request.POST.get('title')
+            content = request.POST.get('content')
+            image = request.FILES.get('image')
+            remove_image = request.POST.get('remove_image')  
+
+            if not company_id or not title or not content:
+                messages.error(request, 'Company, Title, and Content are required.')
+                return redirect('edit_article', encrypted_id=encrypted_id)
+
+            company_obj = get_company_by_encrypted_id(company_id)
+            if not company_obj:
+                messages.error(request, 'Invalid company selected.')
+                return redirect('edit_article', encrypted_id=encrypted_id)
+
+            article.company = company_obj
+            article.title = title
+            article.content = content
+            article.category = category
+            
+
+            if remove_image and article.image:
+                article.image.delete(save=False)
+                article.image = None
+
+            if image:
+                if image.size > 2 * 1024 * 1024:
+                    messages.error(request, 'Image size must be less than 2MB.')
+                    return redirect('edit_article', encrypted_id=encrypted_id)
+                
+                allowed_types = ['image/jpeg', 'image/png']
+
+                if image.content_type not in allowed_types:
+                    messages.error(request, 'Only JPEG, PNG images are allowed.')
+                    return redirect('edit_article', encrypted_id=encrypted_id)
+                
+                if article.image:
+                    article.image.delete(save=False)
+                
+                article.image = image
+                
+            article.updated_at=timezone.now()
+            article.save()
+
+            messages.success(request, f'Article "{title}" updated successfully!')
+            return redirect('articles_list')
+
+        except Exception as e:
+            print(f'Error updating article: {str(e)}')
+            messages.error(request, f'Error updating article: {str(e)}')
+            return redirect('edit_article', encrypted_id=encrypted_id)
+        
+    available_companies = company.objects.exclude(status='5')
+    for comp in available_companies:
+        comp.md5_id = encrypt_id(comp.id)
+
+    context = {
+        'current_user': user.objects.get(id=request.session.get('user_id')),
+        'article': article,
+        'companies': available_companies,
+        'categories': articles.CATEGORY_CHOICES
+    }
+    return render(request, 'edit_article.html', context)
+
+@super_admin_required
+def delete_article(request, encrypted_id):
+    article = get_article_by_encrypted_id(encrypted_id)
+
+    try:
+        title = article.title
+        article.status = '5'
+        article.save()
+        messages.success(request, f'Article "{title}" deleted successfully!')
+        
+    except Exception as e:
+        messages.error(request, f'Error deleting article: {str(e)}')
+    
+    return redirect('articles_list')
+
+# @super_admin_required
+# def article_details(request, encrypted_id):
+#     article_md5 = get_article_by_encrypted_id(encrypted_id)
+
+#     company_md5 = encrypt_id(article_md5.company.id)
+#     # article_md5 = encrypt_id(article.id) 
+
+#     company_md5 = get_company_by_encrypted_id(encrypted_id)
+
+#     context = {
+#         # 'article_md5': article,
+#         'article_md5': article_md5,
+#         'company_md5': company_md5,
+#         'current_user': user.objects.get(id=request.session.get('user_id'))
+#     }
+#     return render(request, 'article_details.html', context)
+
+@super_admin_required
+def article_details(request, encrypted_id):
+    try:
+        article = get_article_by_encrypted_id(encrypted_id)
+
+        company_md5 = encrypt_id(article.company.id)
+        
+        article_md5 =  encrypted_id
+        
+        context = {
+            'article': article,  
+            'article_md5': article_md5,  
+            'company_md5': company_md5,  
+            'current_user': user.objects.get(id=request.session.get('user_id'))
+        }
+        return render(request, 'article_details.html', context)
+        
+    except Exception as e:
+        print(f"Error in article_details: {str(e)}")
+        messages.error(request, f"Error loading article: {str(e)}")
+        return redirect('articles_list')
+
+
+
+
