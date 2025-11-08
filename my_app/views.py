@@ -171,8 +171,6 @@ def edit_user(request, encrypted_id):
             phone_no = request.POST.get('phone_no')
             role = request.POST.get('role')
 
-
-
             user_obj.full_name = full_name
             user_obj.username = username if username else None
             user_obj.email = email
