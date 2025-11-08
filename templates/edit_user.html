@@ -39,7 +39,8 @@
                     <h5 class="card-title">User Information</h5>
                 </div>
                 <div class="card-body">
-                    <form method="post" id="editUserForm" action="{% url 'edit_user' encrypted_id %}">
+                    <form method="post" id="editUserForm" action="{% url 'edit_user' user_obj.md5_id %}">
+
                         {% csrf_token %}
                         
                         <!-- Basic Information -->

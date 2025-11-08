@@ -189,8 +189,7 @@ def edit_user(request, encrypted_id):
         
     context = {
         'current_user': user.objects.get(id=request.session.get('user_id')),
-        'user_obj': user_obj,
-        'encrypted_id': encrypted_id   
+        'user_obj': user_obj 
 
     }
         
