@@ -191,7 +191,9 @@ def edit_user(request, encrypted_id):
         
     context = {
         'current_user': user.objects.get(id=request.session.get('user_id')),
-        'user_obj': user_obj
+        'user_obj': user_obj,
+        'encrypted_id': encrypted_id   
+
     }
         
     return render(request, 'edit_user.html', context)
@@ -226,8 +228,7 @@ def user_details(request, encrypted_id):
     
     context = {
         'user_obj': user_obj,
-        'current_user': user.objects.get(id=request.session.get('user_id')),
-        'encrypted_id': encrypted_id   
+        'current_user': user.objects.get(id=request.session.get('user_id'))
     }
     
     return render(request, 'user_details.html', context)
