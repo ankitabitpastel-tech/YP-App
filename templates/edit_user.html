@@ -17,7 +17,7 @@
         </div>
     </div>
 
-    <!-- {% if messages %}
+    {% if messages %}
     <div class="row">
         <div class="col-12">
             {% for message in messages %}
@@ -27,7 +27,7 @@
                     <span>&times;</span>
                 </button>
             </div>
-            {% endfor %} -->
+            {% endfor %}
         </div>
     </div>
     {% endif %}
@@ -39,7 +39,7 @@
                     <h5 class="card-title">User Information</h5>
                 </div>
                 <div class="card-body">
-                    <form method="post" id="editUserForm">
+                    <form method="post" id="editUserForm" action="{% url 'edit_user' encrypted_id %}">
                         {% csrf_token %}
                         
                         <!-- Basic Information -->
@@ -167,11 +167,11 @@
         // $('#confirm_password').on('input', validatePassword);
         // $('#password').on('input', validatePassword);
 
-        // // Email validation
-        // function validateEmail(email) {
-        //     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        //     return re.test(email);
-        // }
+        // Email validation
+        function validateEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
 
         $('#email').on('blur', function() {
             const email = $(this).val();
