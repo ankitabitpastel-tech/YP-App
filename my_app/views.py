@@ -226,7 +226,8 @@ def user_details(request, encrypted_id):
     
     context = {
         'user_obj': user_obj,
-        'current_user': user.objects.get(id=request.session.get('user_id'))
+        'current_user': user.objects.get(id=request.session.get('user_id')),
+        'encrypted_id': encrypted_id   
     }
     
     return render(request, 'user_details.html', context)
