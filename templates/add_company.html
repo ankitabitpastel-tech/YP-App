@@ -16,7 +16,7 @@
         </div>
         <div class="card-body">
           <!-- Messages -->
-          <!-- {% if messages %}
+          {% if messages %}
           <div class="mb-4">
             {% for message in messages %}
             <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -25,7 +25,7 @@
             </div>
             {% endfor %}
           </div>
-          {% endif %} -->
+          {% endif %}
 
           <form method="POST" id="companyForm" novalidate>
             {% csrf_token %}

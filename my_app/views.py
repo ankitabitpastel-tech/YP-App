@@ -270,7 +270,7 @@ def users_data(request):
                     <div class='btn-group'>
                       <a href='/users/details/{usr.md5_id}/' class='btn btn-sm btn-primary'><i class='fas fa-eye'></i></a>
                       <a href='/users/edit/{usr.md5_id}/' class='btn btn-sm btn-warning'><i class='fas fa-edit'></i></a>
-                      <a href='/users/delete/{usr.md5_id}/' class='btn btn-sm btn-danger' onclick="return confirm('Are you sure?')"><i class='fas fa-user-times'></i></a>
+                      <a href='/users/delete/{usr.md5_id}/' class='btn btn-sm btn-danger' onclick="return confirm('Are you sure you want to delete the user?')"><i class='fas fa-user-times'></i></a>
                     </div>
 
                 """
