@@ -5,8 +5,7 @@
 __pycache__/
 migrations/
 db.sqlite3
-media/
-staticfiles/
+
 
 # Environment variables
 .env
