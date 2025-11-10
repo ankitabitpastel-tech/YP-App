@@ -189,8 +189,8 @@ RENDER = os.environ.get('RENDER', 'False').lower() == 'true'
 
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = os.getenv('SECRET_KEY')
-DEBUG = os.getenv('DEBUG', 'True').lower() == 'true' if not RENDER else False
-
+# DEBUG = os.getenv('DEBUG', 'True').lower() == 'true' if not RENDER else False
+DEBUG = False
 ALLOWED_HOSTS = ['*']
 
 # Application definition
