@@ -1,6 +1,8 @@
 {% extends 'base.html' %}
 {% block title %}Edit Article - Management{% endblock %}
 {% load static %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+
 {% block content %}
 <div class="container-fluid">
   <div class="row mb-4">
@@ -143,9 +145,109 @@
     </div>
   </div>
 </div>
+
+<!-- Crop Modal -->
+<div class="modal fade" id="cropModal" tabindex="-1" aria-labelledby="cropModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="cropModalLabel">Crop Image</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+        <img id="cropImage" src="#" alt="Crop area" style="max-width: 100%; max-height: 500px;">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" id="cropBtn" class="btn btn-primary">
+          <i class="fas fa-crop"></i> Crop & Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden input to hold cropped image -->
+<input type="file" id="croppedFileInput" name="image" style="display: none;">
+
 {% endblock %}
 
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 {% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  let cropper;
+  const imageInput = document.getElementById("image");
+  const cropImage = document.getElementById("cropImage");
+  const cropModalEl = document.getElementById("cropModal");
+  const cropModal = new bootstrap.Modal(cropModalEl);
+  const cropBtn = document.getElementById("cropBtn");
+  const croppedFileInput = document.getElementById("croppedFileInput");
+  const previewImage = document.getElementById("previewImage");
+  const previewSection = document.getElementById("imagePreviewSection");
+
+  imageInput.addEventListener("change", (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      $('#fileTypeError').show();
+      imageInput.value = '';
+      $(imageInput).next('.custom-file-label').html('Choose image file...');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      $('#fileSizeError').show();
+      imageInput.value = '';
+      $(imageInput).next('.custom-file-label').html('Choose image file...');
+      return;
+    }
+
+    $(imageInput).next('.custom-file-label').addClass("selected").html(file.name);
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      cropImage.src = e.target.result;
+      cropModal.show();
+
+      if (cropper) cropper.destroy();
+      cropper = new Cropper(cropImage, {
+        aspectRatio: 16 / 9,
+        viewMode: 1,
+        autoCropArea: 0.8,
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+
+  cropBtn.addEventListener("click", () => {
+    cropper.getCroppedCanvas({
+      width: 1200,
+      height: 675,
+    }).toBlob((blob) => {
+      const file = new File([blob], "cropped_article.jpg", { type: "image/jpeg" });
+
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      croppedFileInput.files = dataTransfer.files;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        previewImage.src = e.target.result;
+        previewImage.style.display = 'block';
+        previewSection.style.display = 'block';
+      };
+      reader.readAsDataURL(blob);
+
+      cropModal.hide();
+    }, "image/jpeg", 0.9);
+  });
+});
+</script>
+
 <script>
 $(document).ready(function() {
   // File input display and preview
