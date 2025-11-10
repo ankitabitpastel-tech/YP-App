@@ -30,6 +30,15 @@
                         <div class="col-12 text-center">
                             <img src="{{ article.image.url }}" alt="{{ article.title }}" 
                                  class="img-fluid rounded" style="max-height: 400px; object-fit: cover;">
+                            <!-- View Image Link -->
+                            <div class="mt-3">
+                                <a href="{{ article.image.url }}" class="btn btn-outline-primary" target="_blank" id="viewImageLink">
+                                    <i class="fas fa-external-link-alt"></i> View Full Image
+                                </a>
+                                <button type="button" class="btn btn-outline-info" id="copyImageLinkBtn" data-toggle="tooltip" title="Copy image URL to clipboard">
+                                    <i class="fas fa-copy"></i> Copy Image Link
+                                </button>
+                            </div>
                         </div>
                     </div>
                     {% endif %}
@@ -155,6 +164,14 @@
     </div>
 </div>
 
+<!-- Success Alert Template (for copy feedback) -->
+<div id="copySuccessAlert" class="alert alert-success alert-dismissible fade show position-fixed" style="top: 20px; right: 20px; z-index: 9999; display: none;">
+    <i class="fas fa-check-circle"></i> Image URL copied to clipboard!
+    <button type="button" class="close" data-dismiss="alert">
+        <span aria-hidden="true">&times;</span>
+    </button>
+</div>
+
 <style>
 .content-area {
     line-height: 1.6;
@@ -178,5 +195,108 @@
 .badge {
     font-size: 0.85em;
 }
+
+#viewImageLink, #copyImageLinkBtn {
+    margin: 0 5px;
+}
+
+#copySuccessAlert {
+    min-width: 300px;
+}
 </style>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize tooltips
+    $('[data-toggle="tooltip"]').tooltip();
+    
+    // Copy image link functionality
+    const copyImageLinkBtn = document.getElementById('copyImageLinkBtn');
+    const viewImageLink = document.getElementById('viewImageLink');
+    const copySuccessAlert = document.getElementById('copySuccessAlert');
+    
+    if (copyImageLinkBtn && viewImageLink) {
+        copyImageLinkBtn.addEventListener('click', function() {
+            const imageUrl = viewImageLink.href;
+            
+            // Use the modern Clipboard API
+            navigator.clipboard.writeText(imageUrl).then(function() {
+                // Show success feedback
+                $(copySuccessAlert).fadeIn();
+                setTimeout(function() {
+                    $(copySuccessAlert).fadeOut();
+                }, 3000);
+                
+                // Update tooltip temporarily
+                const originalTitle = $(copyImageLinkBtn).attr('data-original-title');
+                $(copyImageLinkBtn).tooltip('dispose').attr('title', 'Copied!').tooltip();
+                $(copyImageLinkBtn).tooltip('show');
+                
+                // Restore original title after 2 seconds
+                setTimeout(function() {
+                    $(copyImageLinkBtn).tooltip('dispose').attr('title', originalTitle).tooltip();
+                }, 2000);
+                
+            }).catch(function(err) {
+                console.error('Failed to copy image URL: ', err);
+                // Fallback for older browsers
+                fallbackCopyTextToClipboard(imageUrl);
+            });
+        });
+    }
+    
+    // Fallback method for copying text
+    function fallbackCopyTextToClipboard(text) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.opacity = 0;
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            const successful = document.execCommand('copy');
+            if (successful) {
+                $(copySuccessAlert).fadeIn();
+                setTimeout(function() {
+                    $(copySuccessAlert).fadeOut();
+                }, 3000);
+            } else {
+                alert('Failed to copy image URL. Please copy it manually: ' + text);
+            }
+        } catch (err) {
+            console.error('Fallback copy failed: ', err);
+            alert('Failed to copy image URL. Please copy it manually: ' + text);
+        }
+        
+        document.body.removeChild(textArea);
+    }
+    
+    // Image error handling
+    const articleImage = document.querySelector('img[alt="{{ article.title }}"]');
+    if (articleImage) {
+        articleImage.addEventListener('error', function() {
+            console.error('Failed to load article image');
+            // You could show a placeholder image here if desired
+            this.style.display = 'none';
+            const imageContainer = this.closest('.text-center');
+            if (imageContainer) {
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'alert alert-warning';
+                errorMsg.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Image failed to load. ' +
+                                    '<a href="{{ article.image.url }}" target="_blank" class="alert-link">Try viewing the image directly</a>.';
+                imageContainer.appendChild(errorMsg);
+            }
+        });
+        
+        // Image load success
+        articleImage.addEventListener('load', function() {
+            console.log('Article image loaded successfully');
+        });
+    }
+});
+</script>
 {% endblock %}

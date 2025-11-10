@@ -90,6 +90,12 @@
                 <div class="text-center">
                   <img id="previewImage" src="#" alt="Preview" class="img-fluid rounded" style="max-height: 200px; display: none;">
                 </div>
+                <!-- View Image Link -->
+                <div id="viewImageLinkContainer" class="text-center mt-2" style="display: none;">
+                  <a href="#" id="viewImageLink" class="btn btn-sm btn-outline-primary" target="_blank">
+                    <i class="fas fa-external-link-alt"></i> View Full Image
+                  </a>
+                </div>
               </div>
               
               <div id="fileSizeError" class="text-danger mt-2" style="display: none;">
@@ -166,6 +172,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const croppedFileInput = document.getElementById("croppedFileInput");
   const previewImage = document.getElementById("previewImage");
   const previewSection = document.getElementById("imagePreviewSection");
+  const viewImageLink = document.getElementById("viewImageLink");
+  const viewImageLinkContainer = document.getElementById("viewImageLinkContainer");
 
   imageInput.addEventListener("change", (event) => {
     const file = event.target.files[0];
@@ -187,6 +195,10 @@ document.addEventListener("DOMContentLoaded", function () {
       $(imageInput).next('.custom-file-label').html('Choose image file...');
       return;
     }
+
+    // Hide any previous errors
+    $('#fileTypeError').hide();
+    $('#fileSizeError').hide();
 
     // Update file label
     $(imageInput).next('.custom-file-label').addClass("selected").html(file.name);
@@ -224,6 +236,14 @@ document.addEventListener("DOMContentLoaded", function () {
         previewImage.src = e.target.result;
         previewImage.style.display = 'block';
         previewSection.style.display = 'block';
+        
+        // Create object URL for the full image view
+        const objectUrl = URL.createObjectURL(blob);
+        viewImageLink.href = objectUrl;
+        viewImageLinkContainer.style.display = 'block';
+        
+        // Store the object URL for cleanup
+        viewImageLink.dataset.objectUrl = objectUrl;
       };
       reader.readAsDataURL(blob);
 
@@ -231,8 +251,15 @@ document.addEventListener("DOMContentLoaded", function () {
     }, "image/jpeg", 0.9);
   });
 
+  // Clean up object URLs when leaving the page
+  window.addEventListener('beforeunload', function() {
+    if (viewImageLink.dataset.objectUrl) {
+      URL.revokeObjectURL(viewImageLink.dataset.objectUrl);
+    }
+  });
+
   // Form validation
-const form = document.getElementById('articleForm');
+  const form = document.getElementById('articleForm');
 
   form.addEventListener('submit', function (e) {
     e.preventDefault();
@@ -267,6 +294,10 @@ const form = document.getElementById('articleForm');
     }
 
     if (valid) {
+      // Clean up object URL before form submission
+      if (viewImageLink.dataset.objectUrl) {
+        URL.revokeObjectURL(viewImageLink.dataset.objectUrl);
+      }
       form.submit();
     }
   });
@@ -317,6 +348,10 @@ const form = document.getElementById('articleForm');
 .cropper-view-box,
 .cropper-face {
   border-radius: 4px;
+}
+
+#viewImageLinkContainer {
+  margin-top: 10px;
 }
 </style>
 {% endblock %}

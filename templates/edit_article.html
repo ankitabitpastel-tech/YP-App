@@ -77,8 +77,13 @@
             {% if article.image %}
             <div class="form-group">
               <label>Current Image</label>
-              <div>
+              <div class="text-center">
                 <img src="{{ article.image.url }}" alt="Current image" class="img-thumbnail" style="max-height: 200px;">
+              </div>
+              <div class="text-center mt-2">
+                <a href="{{ article.image.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                  <i class="fas fa-external-link-alt"></i> View Full Image
+                </a>
               </div>
               <div class="mt-2">
                 <div class="form-check">
@@ -102,10 +107,17 @@
 
               <input type="file" id="croppedFileInput" name="cropped_image" style="display: none;">
 
+              <!-- New Image Preview -->
               <div id="imagePreviewSection" class="mt-3" style="display: none;">
                 <h6>New Image Preview</h6>
                 <div class="text-center">
                   <img id="previewImage" src="#" alt="Preview" class="img-fluid rounded" style="max-height: 200px; display: none;">
+                </div>
+                <!-- View New Image Link -->
+                <div id="viewImageLinkContainer" class="text-center mt-2" style="display: none;">
+                  <a href="#" id="viewImageLink" class="btn btn-sm btn-outline-primary" target="_blank">
+                    <i class="fas fa-external-link-alt"></i> View Full New Image
+                  </a>
                 </div>
               </div>
 
@@ -183,6 +195,8 @@ document.addEventListener("DOMContentLoaded", function () {
   const croppedFileInput = document.getElementById("croppedFileInput");
   const previewImage = document.getElementById("previewImage");
   const previewSection = document.getElementById("imagePreviewSection");
+  const viewImageLink = document.getElementById("viewImageLink");
+  const viewImageLinkContainer = document.getElementById("viewImageLinkContainer");
 
   imageInput.addEventListener("change", (event) => {
     const file = event.target.files[0];
@@ -201,6 +215,10 @@ document.addEventListener("DOMContentLoaded", function () {
       $(imageInput).next('.custom-file-label').html('Choose image file...');
       return;
     }
+
+    // Hide any previous errors
+    $('#fileTypeError').hide();
+    $('#fileSizeError').hide();
 
     $(imageInput).next('.custom-file-label').addClass("selected").html(file.name);
 
@@ -234,23 +252,116 @@ document.addEventListener("DOMContentLoaded", function () {
         previewImage.src = e.target.result;
         previewImage.style.display = 'block';
         previewSection.style.display = 'block';
+        
+        // Create object URL for the full image view
+        const objectUrl = URL.createObjectURL(blob);
+        viewImageLink.href = objectUrl;
+        viewImageLinkContainer.style.display = 'block';
+        
+        // Store the object URL for cleanup
+        viewImageLink.dataset.objectUrl = objectUrl;
       };
       reader.readAsDataURL(blob);
       cropModal.hide();
     }, "image/jpeg", 0.9);
   });
+
+  // Clean up object URLs when leaving the page
+  window.addEventListener('beforeunload', function() {
+    if (viewImageLink.dataset.objectUrl) {
+      URL.revokeObjectURL(viewImageLink.dataset.objectUrl);
+    }
+  });
+
+  // Form validation
+  const form = document.getElementById('editArticleForm');
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    let valid = true;
+
+    // Clear previous error messages
+    document.querySelectorAll('.text-danger.small').forEach(el => el.remove());
+
+    const company = document.getElementById('company_id');
+    const title = document.getElementById('title');
+    const category = document.getElementById('category');
+    const content = document.getElementById('content');
+
+    if (company.value.trim() === '') {
+      showError(company, 'Please select a company.');
+      valid = false;
+    }
+
+    if (title.value.trim() === '') {
+      showError(title, 'Please enter article title.');
+      valid = false;
+    }
+
+    if (category.value.trim() === '') {
+      showError(category, 'Please select a category.');
+      valid = false;
+    }
+
+    if (content.value.trim() === '') {
+      showError(content, 'Please enter article content.');
+      valid = false;
+    }
+
+    if (valid) {
+      // Clean up object URL before form submission
+      if (viewImageLink.dataset.objectUrl) {
+        URL.revokeObjectURL(viewImageLink.dataset.objectUrl);
+      }
+      form.submit();
+    }
+  });
+
+  function showError(element, message) {
+    const error = document.createElement('small');
+    error.classList.add('text-danger', 'small', 'd-block', 'mt-1');
+    error.textContent = message;
+    element.closest('.form-group').appendChild(error);
+  }
+
 });
+
+  // Unsaved changes warning
+  let formChanged = false;
+  $('#editArticleForm').on('change keyup', function() {
+    formChanged = true;
+  });
+
+  $(window).on('beforeunload', function() {
+    if (formChanged) {
+      return 'You have unsaved changes. Are you sure you want to leave?';
+    }
+  });
+
+  $('#editArticleForm').on('submit', function() {
+    formChanged = false;
+  });
+
 </script>
 
 <style>
-.form-group { margin-bottom: 1.5rem; }
-.custom-file-label::after { content: "Browse"; }
+.form-group { 
+  margin-bottom: 1.5rem; 
+}
+.custom-file-label::after { 
+  content: "Browse"; 
+}
 #previewImage {
   border: 2px solid #dee2e6;
   border-radius: 8px;
   padding: 5px;
   background-color: #f8f9fa;
 }
-.cropper-view-box, .cropper-face { border-radius: 4px; }
+.cropper-view-box, .cropper-face { 
+  border-radius: 4px; 
+}
+#viewImageLinkContainer {
+  margin-top: 10px;
+}
 </style>
 {% endblock %}
