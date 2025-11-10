@@ -76,21 +76,25 @@
             <!-- Current Image -->
             {% if article.image %}
             <div class="form-group">
-              <label>Current Image</label>
-              <div class="text-center">
-                <img src="{{ article.image.url }}" alt="Current image" class="img-thumbnail" style="max-height: 200px;">
-              </div>
-              <div class="text-center mt-2">
-                <a href="{{ article.image.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
-                  <i class="fas fa-external-link-alt"></i> View Full Image
-                </a>
-              </div>
-              <div class="mt-2">
-                <div class="form-check">
-                  <input class="form-check-input" type="checkbox" id="remove_image" name="remove_image">
-                  <label class="form-check-label text-danger" for="remove_image">Remove current image</label>
+                <label>Current Image</label>
+                <div class="text-center">
+                    <img src="{{ article.image.url }}" alt="Current image" class="img-thumbnail" style="max-height: 200px;">
                 </div>
-              </div>
+                <div class="text-center mt-2">
+                    <a href="{{ article.image.url }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                        <i class="fas fa-external-link-alt"></i> View Full Image
+                    </a>
+                    <button type="button" class="btn btn-sm btn-outline-info copy-image-link" 
+                            data-image-url="{{ article.image.url }}">
+                        <i class="fas fa-copy"></i> Copy Link
+                    </button>
+                </div>
+                <div class="mt-2">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="remove_image" name="remove_image">
+                        <label class="form-check-label text-danger" for="remove_image">Remove current image</label>
+                    </div>
+                </div>
             </div>
             {% endif %}
 
@@ -342,6 +346,185 @@ document.addEventListener("DOMContentLoaded", function () {
     formChanged = false;
   });
 
+</script>
+<script>
+  $(document).ready(function () {
+  let cropper;
+  let currentObjectUrl = null;
+
+  // File input change event
+  $('#image').on('change', function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Check file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      $('#fileTypeError').show();
+      $(this).val('');
+      $(this).next('.custom-file-label').html('Choose image file...');
+      return;
+    }
+    
+    // Check file size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      $('#fileSizeError').show();
+      $(this).val('');
+      $(this).next('.custom-file-label').html('Choose image file...');
+      return;
+    }
+
+    // Hide any previous errors
+    $('#fileTypeError').hide();
+    $('#fileSizeError').hide();
+
+    // Update file label
+    $(this).next('.custom-file-label').addClass("selected").html(file.name);
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      $('#cropImage').attr('src', e.target.result);
+      $('#cropModal').modal('show');
+
+      if (cropper) {
+        cropper.destroy();
+      }
+      
+      cropper = new Cropper(document.getElementById('cropImage'), {
+        aspectRatio: 16 / 9,
+        viewMode: 1,
+        autoCropArea: 0.8,
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Crop button click event
+  $('#cropBtn').on('click', function() {
+    cropper.getCroppedCanvas({
+      width: 1200,
+      height: 675,
+    }).toBlob(function(blob) {
+      // Create file with proper naming (matching your upload_to function)
+      const timestamp = new Date().getTime();
+      const fileName = `cropped_${timestamp}.jpg`;
+      const file = new File([blob], fileName, { type: "image/jpeg" });
+
+      // Put cropped file into the main file input
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      $('#image')[0].files = dataTransfer.files;
+
+      // Update file label
+      $('#image').next('.custom-file-label').addClass("selected").html(fileName);
+
+      // Create temporary blob URL for preview
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+      }
+      
+      currentObjectUrl = URL.createObjectURL(blob);
+      
+      // Show preview with jQuery
+      $('#previewImage')
+        .attr('src', currentObjectUrl)
+        .show();
+      
+      $('#imagePreviewSection').show();
+      
+      // Setup temporary view link
+      $('#viewImageLink')
+        .attr('href', currentObjectUrl)
+        .attr('title', 'Preview of cropped image');
+      
+      $('#viewImageLinkContainer').show();
+
+      $('#cropModal').modal('hide');
+
+    }, "image/jpeg", 0.9);
+  });
+
+  // Copy image link functionality
+  $('.copy-image-link').on('click', function() {
+    const imageUrl = $(this).data('image-url');
+    
+    // Use the modern Clipboard API
+    navigator.clipboard.writeText(imageUrl).then(function() {
+      // Show success feedback
+      showTempAlert('Image URL copied to clipboard!', 'success');
+    }).catch(function(err) {
+      console.error('Failed to copy image URL: ', err);
+      // Fallback for older browsers
+      fallbackCopyTextToClipboard(imageUrl);
+    });
+  });
+
+  // Form submission cleanup
+  $('#articleForm, #editArticleForm').on('submit', function() {
+    // Clean up blob URL before submission
+    if (currentObjectUrl) {
+      URL.revokeObjectURL(currentObjectUrl);
+    }
+  });
+
+  // Clean up when leaving page
+  $(window).on('beforeunload', function() {
+    if (currentObjectUrl) {
+      URL.revokeObjectURL(currentObjectUrl);
+    }
+  });
+
+  // Helper functions
+  function fallbackCopyTextToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.opacity = 0;
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+      const successful = document.execCommand('copy');
+      if (successful) {
+        showTempAlert('Image URL copied to clipboard!', 'success');
+      }
+    } catch (err) {
+      showTempAlert('Failed to copy image URL. Please copy it manually.', 'error');
+    }
+    
+    document.body.removeChild(textArea);
+  }
+
+  function showTempAlert(message, type) {
+    const alertClass = type === 'success' ? 'alert-success' : 'alert-danger';
+    const alert = $('<div>', {
+      class: `alert ${alertClass} alert-dismissible fade show position-fixed`,
+      css: {
+        top: '20px', 
+        right: '20px', 
+        'z-index': '9999',
+        'min-width': '300px'
+      },
+      html: `
+        <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'}"></i> 
+        ${message}
+        <button type="button" class="close" data-dismiss="alert">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      `
+    });
+    
+    $('body').append(alert);
+    alert.fadeIn();
+    
+    setTimeout(function() {
+      alert.fadeOut(function() {
+        $(this).remove();
+      });
+    }, 3000);
+  }
+});
 </script>
 
 <style>
