@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}Edit Article - Management{% endblock %}
 {% load static %}
-<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
 
 {% block content %}
 <div class="container-fluid">
@@ -32,26 +31,26 @@
             {% endfor %}
           {% endif %}
 
-          <form method="POST" id="editArticleForm" enctype="multipart/form-data">
+          <form method="POST" id="editArticleForm" enctype="multipart/form-data" novalidate>
             {% csrf_token %}
             
-            <!-- Company Selection -->
+            <!-- Company -->
             <div class="form-group">
               <label for="company_id">Company *</label>
               <select class="form-control" id="company_id" name="company_id" required>
                 <option value="">-- Select Company --</option>
                 {% for comp in companies %}
-                <option value="{{ comp.md5_id }}" {% if comp.id == article.company.id %}selected{% endif %}>
-                  {{ comp.name }} ({{ comp.email }})
-                </option>
+                  <option value="{{ comp.md5_id }}" {% if comp.id == article.company.id %}selected{% endif %}>
+                    {{ comp.name }} ({{ comp.email }})
+                  </option>
                 {% endfor %}
               </select>
             </div>
 
-            <!-- Article Title -->
+            <!-- Title -->
             <div class="form-group">
               <label for="title">Article Title *</label>
-              <input type="text" class="form-control" id="title" name="title" 
+              <input type="text" class="form-control" id="title" name="title"
                      value="{{ article.title }}" required maxlength="255">
             </div>
 
@@ -61,60 +60,55 @@
               <select class="form-control" id="category" name="category" required>
                 <option value="">-- Select Category --</option>
                 {% for value, label in categories %}
-                <option value="{{ value }}" {% if article.category == value %}selected{% endif %}>
-                  {{ label }}
-                </option>
+                  <option value="{{ value }}" {% if article.category == value %}selected{% endif %}>
+                    {{ label }}
+                  </option>
                 {% endfor %}
               </select>
             </div>
 
-            <!-- Article Content -->
+            <!-- Content -->
             <div class="form-group">
               <label for="content">Content *</label>
-              <textarea class="form-control" id="content" name="content" 
-                        rows="10" required>{{ article.content }}</textarea>
+              <textarea class="form-control" id="content" name="content" rows="10" required>{{ article.content }}</textarea>
             </div>
 
             <!-- Current Image -->
+            {% if article.image %}
             <div class="form-group">
               <label>Current Image</label>
               <div>
-                {% if article.image %}
-                  <img src="{{ article.image.url }}" alt="Current image" class="img-thumbnail" style="max-height: 200px;">
-                  <div class="mt-2">
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" id="remove_image" name="remove_image">
-                      <label class="form-check-label text-danger" for="remove_image">
-                        Remove current image
-                      </label>
-                    </div>
-                  </div>
-                {% else %}
-                  <p class="text-muted">No image uploaded</p>
-                {% endif %}
+                <img src="{{ article.image.url }}" alt="Current image" class="img-thumbnail" style="max-height: 200px;">
+              </div>
+              <div class="mt-2">
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" id="remove_image" name="remove_image">
+                  <label class="form-check-label text-danger" for="remove_image">Remove current image</label>
+                </div>
               </div>
             </div>
+            {% endif %}
 
-            <!-- New Image Upload -->
+            <!-- Image Upload -->
             <div class="form-group">
               <label for="image">Replace Image (Optional)</label>
               <div class="custom-file">
                 <input type="file" class="custom-file-input" id="image" name="image" accept="image/*">
-                <label class="custom-file-label" for="image">Choose new image file...</label>
+                <label class="custom-file-label" for="image">Choose image file...</label>
               </div>
               <small class="form-text text-muted">
-                <i class="fas fa-info-circle"></i> Recommended size: 1200x630px. Maximum file size: 2MB.
-                Supported formats: JPEG, PNG, GIF, WebP.
+                <i class="fas fa-info-circle"></i> Recommended size: 1200x630px (16:9 ratio). Max size: 2MB.
               </small>
-              
-              <!-- New Image Preview -->
+
+              <input type="file" id="croppedFileInput" name="cropped_image" style="display: none;">
+
               <div id="imagePreviewSection" class="mt-3" style="display: none;">
                 <h6>New Image Preview</h6>
                 <div class="text-center">
-                  <img id="previewImage" src="#" alt="Preview" class="img-fluid rounded" style="max-height: 300px; display: none;">
+                  <img id="previewImage" src="#" alt="Preview" class="img-fluid rounded" style="max-height: 200px; display: none;">
                 </div>
               </div>
-              
+
               <div id="fileSizeError" class="text-danger mt-2" style="display: none;">
                 <i class="fas fa-exclamation-triangle"></i> File size exceeds 2MB limit.
               </div>
@@ -132,7 +126,7 @@
               </select>
             </div>
 
-            <!-- Form Actions -->
+            <!-- Actions -->
             <div class="form-group">
               <button type="submit" class="btn btn-primary">
                 <i class="fas fa-save"></i> Update Article
@@ -148,33 +142,36 @@
 
 <!-- Crop Modal -->
 <div class="modal fade" id="cropModal" tabindex="-1" aria-labelledby="cropModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
+  <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
         <h5 class="modal-title" id="cropModalLabel">Crop Image</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
       </div>
-      <div class="modal-body text-center">
-        <img id="cropImage" src="#" alt="Crop area" style="max-width: 100%; max-height: 500px;">
+      <div class="modal-body">
+        <div class="text-center">
+          <img id="cropImage" src="#" alt="Crop preview" style="max-width: 100%; max-height: 500px;">
+        </div>
+        <div class="mt-3">
+          <small class="text-muted">Drag to crop the image. Aspect ratio: 16:9</small>
+        </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" id="cropBtn" class="btn btn-primary">
-          <i class="fas fa-crop"></i> Crop & Save
-        </button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="cropBtn">Crop Image</button>
       </div>
     </div>
   </div>
 </div>
-
-<!-- Hidden input to hold cropped image -->
-<input type="file" id="croppedFileInput" name="image" style="display: none;">
-
 {% endblock %}
 
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 {% block extra_scripts %}
+<!-- CropperJS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+
 <script>
 document.addEventListener("DOMContentLoaded", function () {
   let cropper;
@@ -198,7 +195,6 @@ document.addEventListener("DOMContentLoaded", function () {
       $(imageInput).next('.custom-file-label').html('Choose image file...');
       return;
     }
-
     if (file.size > 2 * 1024 * 1024) {
       $('#fileSizeError').show();
       imageInput.value = '';
@@ -229,7 +225,6 @@ document.addEventListener("DOMContentLoaded", function () {
       height: 675,
     }).toBlob((blob) => {
       const file = new File([blob], "cropped_article.jpg", { type: "image/jpeg" });
-
       const dataTransfer = new DataTransfer();
       dataTransfer.items.add(file);
       croppedFileInput.files = dataTransfer.files;
@@ -241,121 +236,21 @@ document.addEventListener("DOMContentLoaded", function () {
         previewSection.style.display = 'block';
       };
       reader.readAsDataURL(blob);
-
       cropModal.hide();
     }, "image/jpeg", 0.9);
   });
 });
 </script>
 
-<script>
-$(document).ready(function() {
-  // File input display and preview
-  $('#image').on('change', function() {
-    const file = this.files[0];
-    const previewSection = $('#imagePreviewSection');
-    const previewImage = $('#previewImage');
-    
-    // Reset error messages
-    $('#fileSizeError').hide();
-    $('#fileTypeError').hide();
-    
-    if (file) {
-      // Check file type
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-      if (!allowedTypes.includes(file.type)) {
-        $('#fileTypeError').show();
-        $(this).val('');
-        $(this).next('.custom-file-label').html('Choose image file...');
-        previewSection.hide();
-        previewImage.hide();
-        return;
-      }
-      
-      // Check file size (2MB)
-      if (file.size > 2 * 1024 * 1024) {
-        $('#fileSizeError').show();
-        $(this).val('');
-        $(this).next('.custom-file-label').html('Choose image file...');
-        previewSection.hide();
-        previewImage.hide();
-        return;
-      }
-      
-      // Update file label
-      $(this).next('.custom-file-label').addClass("selected").html(file.name);
-      
-      // Show preview section
-      previewSection.show();
-      
-      // Create and show image preview
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        previewImage.attr('src', e.target.result).show();
-      };
-      reader.readAsDataURL(file);
-    } else {
-      previewSection.hide();
-      previewImage.hide();
-      $(this).next('.custom-file-label').html('Choose image file...');
-    }
-  });
-
-  // Form validation
-  $('#editArticleForm').on('submit', function(e) {
-    const companyId = $('#company_id').val();
-    const title = $('#title').val().trim();
-    const content = $('#content').val().trim();
-    const category = $('#category').val();
-    
-    // Basic validation
-    if (!companyId) {
-      e.preventDefault();
-      alert('Please select a company');
-      $('#company_id').focus();
-      return false;
-    }
-    
-    if (!title) {
-      e.preventDefault();
-      alert('Please enter article title');
-      $('#title').focus();
-      return false;
-    }
-    
-    if (!content) {
-      e.preventDefault();
-      alert('Please enter article content');
-      $('#content').focus();
-      return false;
-    }
-    
-    if (!category) {
-      e.preventDefault();
-      alert('Please select a category');
-      $('#category').focus();
-      return false;
-    }
-    
-    return true;
-  });
-});
-</script>
-
 <style>
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.custom-file-label::after {
-  content: "Browse";
-}
-
+.form-group { margin-bottom: 1.5rem; }
+.custom-file-label::after { content: "Browse"; }
 #previewImage {
   border: 2px solid #dee2e6;
   border-radius: 8px;
   padding: 5px;
   background-color: #f8f9fa;
 }
+.cropper-view-box, .cropper-face { border-radius: 4px; }
 </style>
 {% endblock %}
