@@ -70,7 +70,7 @@ def dashboard(request):
     user_id = request.session.get('user_id')
     user_obj = user.objects.get(id=user_id)
 
-    total_users= user.objects.exclude(status='5').count()
+    total_users= user.objects.exclude(status='5').exclude(role='0').count()
     total_companies= company.objects.exclude(status='5').count()
     total_follows= company_followers.objects.exclude(status='0').count()
     total_jobs= job_posts.objects.exclude(status='5').count()
