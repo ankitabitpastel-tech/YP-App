@@ -1500,9 +1500,13 @@ def article_details(request, encrypted_id):
         company_md5 = encrypt_id(article.company.id)
         
         article_md5 =  encrypted_id
-        
+        image_url = None
+        if article.image and hasattr(article.image, 'url'):
+            image_url = request.build_absolute_uri(article.image.url)
         context = {
-            'article': article,  
+
+            'article': article,
+            'image_url': image_url,  
             'article_md5': article_md5,  
             'company_md5': company_md5,  
             'current_user': user.objects.get(id=request.session.get('user_id'))
