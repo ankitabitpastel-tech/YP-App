@@ -1302,7 +1302,7 @@ def articles_data(request):
                 "title": article.title,
                 "company": f"<a href='/companies/details/{company_md5}/'>{article.company.name}</a>",
                 "category": category_badge,
-                "image": image_url_content,
+                "image": request.build_absolute_uri(article.image.url) if article.image else None,
                 "published_at": article.published_at.strftime('%Y-%m-%d') if article.published_at else "Not published",
                 "actions": f"""
                     <div class='btn-group'>
