@@ -288,7 +288,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 const errorMsg = document.createElement('div');
                 errorMsg.className = 'alert alert-warning';
                 errorMsg.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Image failed to load. ' +
-                                    '<a href="{{ article.image.url }}" target="_blank" class="alert-link">Try viewing the image directly</a>.';
+                    '<a href="{{ image_url }}" target="_blank" class="alert-link">Try viewing the image directly</a>.';
+
                 imageContainer.appendChild(errorMsg);
             }
         });
