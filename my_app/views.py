@@ -1274,25 +1274,30 @@ def articles_data(request):
             # else:
             #     image_thumbnail = '<span class="text-muted">No Image</span>'
 
-            image_url_content = ''
             if article.image:
                 absolute_image_url = request.build_absolute_uri(article.image.url)
                 image_url_content = f"""
-                    <div class="input-group input-group-sm">
-                        <input type="text" class="form-control form-control-sm image-url-input" 
-                               value="{absolute_image_url}" readonly 
-                               style="font-size: 11px; cursor: pointer;" onclick="this.select()">
-                        <div class="input-group-append">
-                            <button class="btn btn-outline-secondary btn-sm copy-btn" type="button"
-                                    data-url="{absolute_image_url}">
-                                <i class="fas fa-copy"></i>
-                            </button>
+                    <div class="d-flex align-items-center">
+                        <a href="{absolute_image_url}" target="_blank">
+                            <img src="{absolute_image_url}" width="50" height="50" class="rounded mr-2" alt="Image" style="object-fit: cover;">
+                        </a>
+                        <div class="input-group input-group-sm" style="max-width: 200px;">
+                            <input type="text" class="form-control form-control-sm image-url-input" 
+                                value="{absolute_image_url}" readonly 
+                                style="font-size: 11px; cursor: pointer;" onclick="this.select()">
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary btn-sm copy-btn" type="button"
+                                        data-url="{absolute_image_url}">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <small class="text-muted">Click input to select</small>
+                    <small class="text-muted">Click image to view full size</small>
                 """
             else:
                 image_url_content = '<span class="text-muted">No Image</span>'
+
             data.append({
                 "title": article.title,
                 "company": f"<a href='/companies/details/{company_md5}/'>{article.company.name}</a>",

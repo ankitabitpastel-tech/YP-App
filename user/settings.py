@@ -292,6 +292,10 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+if 'RENDER' in os.environ:
+    SITE_URL = f"https://{os.environ['RENDER_EXTERNAL_HOSTNAME']}"
+else:
+    SITE_URL = "http://localhost:8000"
 # DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
