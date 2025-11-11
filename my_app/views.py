@@ -1496,13 +1496,16 @@ def delete_article(request, encrypted_id):
 def article_details(request, encrypted_id):
     try:
         article = get_article_by_encrypted_id(encrypted_id)
-
         company_md5 = encrypt_id(article.company.id)
-        
         article_md5 =  encrypted_id
+
         image_url = None
-        if article.image and hasattr(article.image, 'url'):
-            image_url = request.build_absolute_uri(article.image.url)
+        if article.image and article.image.name:  
+            try:
+                image_url = request.build_absolute_uri(article.image.url)
+            except Exception:
+                image_url = None
+                
         context = {
 
             'article': article,
