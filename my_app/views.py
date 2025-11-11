@@ -1302,7 +1302,12 @@ def articles_data(request):
                 "title": article.title,
                 "company": f"<a href='/companies/details/{company_md5}/'>{article.company.name}</a>",
                 "category": category_badge,
-                "image": request.build_absolute_uri(article.image.url) if article.image else None,
+                "image": (
+                    request.build_absolute_uri(article.image.url)
+                    if article.image and getattr(article.image, "name", "")
+                    else None
+                ),
+                # "image": request.build_absolute_uri(article.image.url) if article.image else None,
                 "published_at": article.published_at.strftime('%Y-%m-%d') if article.published_at else "Not published",
                 "actions": f"""
                     <div class='btn-group'>
@@ -1346,8 +1351,11 @@ def add_article(request):
             title = request.POST.get('title')
             content = request.POST.get('content')
             category = request.POST.get('category')
-            image = request.FILES.get('cropped_image') or request.FILES.get('image')
-            
+            image = request.FILES.get('cropped_image')
+            if not image:
+                image = request.FILES.get('image')
+            if image and not image.name:
+                image = None
             if not company_id or not title or not category or not content:
                 messages.error(request, "All required fields must be filled.")
                 return redirect('add_article')
@@ -1503,12 +1511,12 @@ def article_details(request, encrypted_id):
         article_md5 =  encrypted_id
 
         image_url = None
-        if article.image and article.image.name:  
+        if article.image and getattr(article.image, "name", ""):
             try:
                 image_url = request.build_absolute_uri(article.image.url)
             except Exception:
                 image_url = None
-                
+                        
         context = {
 
             'article': article,
