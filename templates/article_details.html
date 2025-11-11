@@ -25,28 +25,25 @@
                 </div>
                 <div class="card-body">
                     <!-- Article Image -->
-                    {% if article.image %}
-
+                    {% if image_url %}
                     <div class="row mb-4">
                         <div class="col-12 text-center">
-                            <!-- Display the image -->
-                            <img src="{{ article.image.url }}" alt="{{ article.title }}" 
-                                class="img-fluid rounded" style="max-height: 400px; object-fit: cover;">
-                            
-                            <!-- View Image Link -->
+                            <img src="{{ image_url }}" alt="{{ article.title }}"
+                                class="img-fluid rounded"
+                                style="max-height: 400px; object-fit: cover;">
                             <div class="mt-3">
-                                <a href="{{ article.image.url }}" class="btn btn-outline-primary" target="_blank">
+                                <a href="{{ image_url }}" class="btn btn-outline-primary" target="_blank">
                                     <i class="fas fa-external-link-alt"></i> View Image
                                 </a>
-                                <!-- <button type="button" class="btn btn-outline-info copy-image-link" 
-                                        data-image-url="{{ article.image.url }}">
-                                    <i class="fas fa-copy"></i> Copy Image Link
-                                </button> -->
                             </div>
                         </div>
                     </div>
-                    {% endif %}
-
+                {% else %}
+                    <div class="alert alert-warning text-center">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        No image available for this article.
+                    </div>
+                {% endif %}
                     <div class="row">
                         <!-- Basic Information -->
                         <div class="col-md-6">
