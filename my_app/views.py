@@ -1346,9 +1346,12 @@ def add_article(request):
             title = request.POST.get('title')
             content = request.POST.get('content')
             category = request.POST.get('category')
-            image = request.FILES.get('image')  
+            image = request.FILES.get('cropped_image') or request.FILES.get('image')
             
-            
+            if not company_id or not title or not category or not content:
+                messages.error(request, "All required fields must be filled.")
+                return redirect('add_article')
+
             company_obj = get_company_by_encrypted_id(company_id)
             if not company_obj:
                 messages.error(request, 'Invalid company selected.')
