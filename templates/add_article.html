@@ -82,7 +82,7 @@
               </small>
               
               <!-- Hidden input for cropped image -->
-              <input type="file" id="croppedFileInput" name="cropped_image" style="display: none;">
+              <!-- <input type="file" id="croppedFileInput" name="cropped_image" style="display: none;"> -->
               
               <!-- Simple Image Preview -->
               <div id="imagePreviewSection" class="mt-3" style="display: none;">
@@ -161,7 +161,208 @@
 <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 
+
 <script>
+  $(document).ready(function () {
+  let cropper;
+  let currentObjectUrl = null;
+  let formChanged = false;
+
+  // File input change event
+  $('#image').on('change', function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Check file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      $('#fileTypeError').show();
+      $(this).val('');
+      $(this).next('.custom-file-label').html('Choose image file...');
+      return;
+    }
+    
+    // Check file size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      $('#fileSizeError').show();
+      $(this).val('');
+      $(this).next('.custom-file-label').html('Choose image file...');
+      return;
+    }
+
+    // Hide any previous errors
+    $('#fileTypeError').hide();
+    $('#fileSizeError').hide();
+
+    // Update file label
+    $(this).next('.custom-file-label').addClass("selected").html(file.name);
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      $('#cropImage').attr('src', e.target.result);
+      $('#cropModal').modal('show');
+
+      if (cropper) {
+        cropper.destroy();
+      }
+      
+      cropper = new Cropper(document.getElementById('cropImage'), {
+        aspectRatio: 16 / 9,
+        viewMode: 1,
+        autoCropArea: 0.8,
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Crop button click event
+  $('#cropBtn').on('click', function() {
+    cropper.getCroppedCanvas({
+      width: 1200,
+      height: 675,
+    }).toBlob(function(blob) {
+      // Create file with proper naming (matching your upload_to function)
+      const timestamp = new Date().getTime();
+      const fileName = `cropped_${timestamp}.jpg`;
+      const file = new File([blob], fileName, { type: "image/jpeg" });
+
+      // Put cropped file into the main file input
+      const dataTransfer = new DataTransfer();
+      dataTransfer.items.add(file);
+      $('#image')[0].files = dataTransfer.files;
+
+      // Update file label
+      $('#image').next('.custom-file-label').addClass("selected").html(fileName);
+
+      // Create temporary blob URL for preview
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+      }
+      
+      currentObjectUrl = URL.createObjectURL(blob);
+      
+      // Show preview with jQuery
+      $('#previewImage')
+        .attr('src', currentObjectUrl)
+        .show();
+      
+      $('#imagePreviewSection').show();
+      
+      // Setup temporary view link
+      $('#viewImageLink')
+        .attr('href', currentObjectUrl)
+        .attr('title', 'Preview of cropped image');
+      
+      $('#viewImageLinkContainer').show();
+
+      $('#cropModal').modal('hide');
+
+    }, "image/jpeg", 0.9);
+  });
+
+  // Form validation on submit
+  $('#articleForm').on('submit', function(e) {
+    e.preventDefault();
+    let valid = true;
+
+    // Clear previous error messages
+    $('.text-danger.small').remove();
+
+    const company = $('#company_id');
+    const title = $('#title');
+    const category = $('#category');
+    const content = $('#content');
+
+    if (company.val().trim() === '') {
+      showError(company, 'Please select a company.');
+      valid = false;
+    }
+
+    if (title.val().trim() === '') {
+      showError(title, 'Please enter article title.');
+      valid = false;
+    }
+
+    if (category.val().trim() === '') {
+      showError(category, 'Please select a category.');
+      valid = false;
+    }
+
+    if (content.val().trim() === '') {
+      showError(content, 'Please enter article content.');
+      valid = false;
+    }
+
+    if (valid) {
+      // Clean up blob URL before submission
+      if (currentObjectUrl) {
+        URL.revokeObjectURL(currentObjectUrl);
+      }
+      // Submit the form
+      this.submit();
+    }
+  });
+
+  function showError(element, message) {
+    const error = $('<small>', {
+      class: 'text-danger small d-block mt-1',
+      text: message
+    });
+    element.closest('.form-group').append(error);
+  }
+
+  // Unsaved changes warning
+  $('#articleForm').on('change keyup', function() {
+    formChanged = true;
+  });
+
+  $(window).on('beforeunload', function() {
+    if (formChanged) {
+      return 'You have unsaved changes. Are you sure you want to leave?';
+    }
+  });
+
+  $('#articleForm').on('submit', function() {
+    formChanged = false;
+  });
+
+  // Clean up when leaving page
+  $(window).on('beforeunload', function() {
+    if (currentObjectUrl) {
+      URL.revokeObjectURL(currentObjectUrl);
+    }
+  });
+});
+</script>
+
+<style>
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.custom-file-label::after {
+  content: "Browse";
+}
+
+#previewImage {
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  padding: 5px;
+  background-color: #f8f9fa;
+}
+
+.cropper-view-box,
+.cropper-face {
+  border-radius: 4px;
+}
+
+#viewImageLinkContainer {
+  margin-top: 10px;
+}
+</style>
+{% endblock %}
+
+<!-- <script>
 document.addEventListener("DOMContentLoaded", function () {
   let cropper;
   const imageInput = document.getElementById("image");
@@ -506,31 +707,4 @@ document.addEventListener("DOMContentLoaded", function () {
     }, 3000);
   }
 });
-</script>
-
-<style>
-.form-group {
-  margin-bottom: 1.5rem;
-}
-
-.custom-file-label::after {
-  content: "Browse";
-}
-
-#previewImage {
-  border: 2px solid #dee2e6;
-  border-radius: 8px;
-  padding: 5px;
-  background-color: #f8f9fa;
-}
-
-.cropper-view-box,
-.cropper-face {
-  border-radius: 4px;
-}
-
-#viewImageLinkContainer {
-  margin-top: 10px;
-}
-</style>
-{% endblock %}
+</script> -->

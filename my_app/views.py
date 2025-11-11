@@ -1268,17 +1268,36 @@ def articles_data(request):
             article_md5 = encrypt_id(article.id)
 
             category_badge = f'<span class="badge badge-info">{article.get_category_display()}</span>'
-            image_thumbnail = ''
-            if article.image:
-                image_thumbnail = f'<img src="{article.image.url}" width="50" height="50" class="rounded" alt="Article Image" style="object-fit: cover;">'
-            else:
-                image_thumbnail = '<span class="text-muted">No Image</span>'
+            # image_thumbnail = ''
+            # if article.image:
+            #     image_thumbnail = f'<img src="{article.image.url}" width="50" height="50" class="rounded" alt="Article Image" style="object-fit: cover;">'
+            # else:
+            #     image_thumbnail = '<span class="text-muted">No Image</span>'
 
+            image_url_content = ''
+            if article.image:
+                absolute_image_url = request.build_absolute_uri(article.image.url)
+                image_url_content = f"""
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control form-control-sm image-url-input" 
+                               value="{absolute_image_url}" readonly 
+                               style="font-size: 11px; cursor: pointer;" onclick="this.select()">
+                        <div class="input-group-append">
+                            <button class="btn btn-outline-secondary btn-sm copy-btn" type="button"
+                                    data-url="{absolute_image_url}">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <small class="text-muted">Click input to select</small>
+                """
+            else:
+                image_url_content = '<span class="text-muted">No Image</span>'
             data.append({
                 "title": article.title,
                 "company": f"<a href='/companies/details/{company_md5}/'>{article.company.name}</a>",
                 "category": category_badge,
-                "image": image_thumbnail,
+                "image": image_url_content,
                 "published_at": article.published_at.strftime('%Y-%m-%d') if article.published_at else "Not published",
                 "actions": f"""
                     <div class='btn-group'>
@@ -1313,6 +1332,7 @@ def articles_data(request):
             "error": str(e)
         })
 
+
 @super_admin_required
 def add_article(request):
     if request.method == "POST":
@@ -1332,9 +1352,9 @@ def add_article(request):
                 if image.size > 2 * 1024 * 1024:
                     messages.error(request, 'Image size must be less than 2MB.')
                     return redirect('add_article')
-                allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+                allowed_types = ['image/jpeg', 'image/png']
                 if image.content_type not in allowed_types:
-                    messages.error(request, 'Only JPEG, PNG, GIF, and WebP images are allowed.')
+                    messages.error(request, 'Only JPEG, PNG images are allowed.')
                     return redirect('add_article')
 
 
@@ -1346,9 +1366,9 @@ def add_article(request):
                 image=image
             )
             new_article.save()
-
             messages.success(request, f'Article "{title}" added successfully!')
             return redirect('articles_list')
+        
         except Exception as e:
             print(f'Error adding article: {str(e)}')
             messages.error(request, f'Error adding article: {str(e)}')
