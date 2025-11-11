@@ -160,7 +160,7 @@ def add_user(request):
 @super_admin_required
 def edit_user(request, encrypted_id):
     user_obj=get_user_by_encrypted_id(encrypted_id)
-
+    user_obj.md5_id = encrypted_id 
     # user_obj=user.objects.get(id=encrypt_id)
 
     if request.method == 'POST':
